@@ -45,8 +45,13 @@ class bigbluebutton {
      * @param array  $metadata
      * @return string
      */
-    public static function action_url($action = '', $data = array(), $metadata = array()) {
-        $baseurl = self::sanitized_url() . $action . '?';
+    public static function action_url($action = '', $data = array(), $metadata = array(),$server=false) {
+	if($server === false || intval($server) <= 0) {
+                error_log(date("Y-M-d H:m:s",time())." get '$setting' from\n".
+                        format_backtrace(debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT),1),0);
+		throw new \Exception("action_url");
+	}
+	$baseurl = self::sanitized_url($server) . $action . '?';
         $metadata = array_combine(
             array_map(
                 function($k) {
@@ -57,7 +62,7 @@ class bigbluebutton {
             $metadata
         );
         $params = http_build_query($data + $metadata, '', '&');
-        return $baseurl . $params . '&checksum=' . sha1($action . $params . self::sanitized_secret());
+        return $baseurl . $params . '&checksum=' . sha1($action . $params . self::sanitized_secret($server));
     }
 
     /**
@@ -65,8 +70,17 @@ class bigbluebutton {
      *
      * @return string
      */
-    public static function sanitized_url() {
-        $serverurl = trim(\mod_bigbluebuttonbn\locallib\config::get('server_url'));
+    public static function sanitized_url($server=false) {
+	if($server === false || intval($server) <= 0) {
+                error_log(date("Y-M-d H:m:s",time())." get '$setting' from\n".
+                        format_backtrace(debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT),1),0);
+		throw new \Exception("sanitized_url");
+	}	
+	$cfg = 'server_url';
+	if($server !== false && intval($server) > 0) {
+	    $cfg .= (string)intval($server);
+	}
+        $serverurl = trim(\mod_bigbluebuttonbn\locallib\config::get($cfg));
         if (substr($serverurl, -1) == '/') {
             $serverurl = rtrim($serverurl, '/');
         }
@@ -81,8 +95,17 @@ class bigbluebutton {
      *
      * @return string
      */
-    public static function sanitized_secret() {
-        return trim(\mod_bigbluebuttonbn\locallib\config::get('shared_secret'));
+    public static function sanitized_secret($server=false) {
+	if($server === false || intval($server) <= 0) {
+                error_log(date("Y-M-d H:m:s",time())." get '$setting' from\n".
+                        format_backtrace(debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT),1),0);
+		throw new \Exception("sanitized_secret");
+	}
+       	$cfg = 'shared_secret';
+	if($server !== false && intval($server) > 0) {
+	    $cfg .= (string)intval($server);
+	}
+        return trim(\mod_bigbluebuttonbn\locallib\config::get($cfg));
     }
 
     /**

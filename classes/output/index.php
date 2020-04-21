@@ -123,7 +123,7 @@ class index implements renderable {
             $urlparams['group'] = $groupobj->id;
             $groupname = $groupobj->name;
         }
-        $meetinginfo = bigbluebuttonbn_get_meeting_info_array($meetingid);
+        $meetinginfo = bigbluebuttonbn_get_meeting_info_array($meetingid,$bigbluebuttonbn->server);
         if (empty($meetinginfo)) {
             // The server was unreachable.
             print_error('index_error_unable_display', plugin::COMPONENT);

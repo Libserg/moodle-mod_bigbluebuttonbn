@@ -121,6 +121,8 @@ function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
         $bbbsession['context']->id, 'mod_bigbluebuttonbn', 'intro', null);
     $output .= $OUTPUT->heading($desc, 5);
 
+    $output .= '<p>Запись:'.array('возможна','отключена','включена')[$type].'</p>';
+
     if ($enabledfeatures['showroom']) {
         $output .= bigbluebuttonbn_view_render_room($bbbsession, $activity, $jsvars);
         $PAGE->requires->yui_module('moodle-mod_bigbluebuttonbn-rooms',
@@ -217,6 +219,7 @@ function bigbluebuttonbn_view_render_room(&$bbbsession, $activity, &$jsvars) {
         'meetingid' => $bbbsession['meetingid'],
         'bigbluebuttonbnid' => $bbbsession['bigbluebuttonbn']->id,
         'userlimit' => $bbbsession['userlimit'],
+        'server' => $bbbsession['server'],
         'opening' => $openingtime,
         'closing' => $closingtime,
     );
@@ -335,10 +338,13 @@ function bigbluebuttonbn_view_warning_default_server(&$bbbsession) {
     if (!is_siteadmin($bbbsession['userID'])) {
         return '';
     }
-    if (BIGBLUEBUTTONBN_DEFAULT_SERVER_URL != \mod_bigbluebuttonbn\locallib\config::get('server_url')) {
-        return '';
+    $bbbservers = \mod_bigbluebuttonbn\locallib\config::server_list();
+    if(!$bbbservers) return '';
+    for($i=1; isset($bbbservers[$i]); $i++) {
+	if (BIGBLUEBUTTONBN_DEFAULT_SERVER_URL == $bbbservers[$i][0])
+	    return bigbluebuttonbn_render_warning(get_string('view_warning_default_server', 'bigbluebuttonbn'), 'warning');
     }
-    return bigbluebuttonbn_render_warning(get_string('view_warning_default_server', 'bigbluebuttonbn'), 'warning');
+    return '';
 }
 
 /**

@@ -312,6 +312,7 @@ $string['view_error_no_group'] = 'There are no groups configured yet. Please set
 $string['view_error_unable_join_student'] = 'Unable to connect to the BigBlueButton server. Please contact your Teacher or the Administrator.';
 $string['view_error_unable_join_teacher'] = 'Unable to connect to the BigBlueButton server. Please contact the Administrator.';
 $string['view_error_unable_join'] = 'Unable to join the meeting. Please check the url of the BigBlueButton server AND check to see if the BigBlueButton server is running.';
+$string['view_stop_join'] = 'Access temporarily closed {$a}';
 $string['view_error_bigbluebutton'] = 'BigBlueButton responded with errors. {$a}';
 $string['view_error_create'] = 'The BigBlueButton server responded with an error message, the meeting could not be created.';
 $string['view_error_max_concurrent'] = 'Number of concurrent meetings allowed has been reached.';
@@ -500,3 +501,6 @@ $string['index_error_bbtn'] = 'BigBlueButton ID {$a} is incorrect';
 
 $string['view_mobile_message_reload_page_creation_time_meeting'] = 'You exceeded the 45 seconds in this page, please reload the page to join correctly to the meeting.';
 $string['view_mobile_message_groups_not_supported'] = 'This instance is enable to work with groups but the mobile app has not support for this. Please open in desktop if you want to use the group support.';
+$string['server'] = 'Server';
+$string['server_help'] = 'We must select server';
+

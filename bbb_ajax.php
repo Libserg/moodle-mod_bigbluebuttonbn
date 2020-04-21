@@ -97,7 +97,7 @@ try {
         return;
     }
     if ($a == 'recording_play') {
-        $recordingplay = bigbluebuttonbn_broker_recording_play($params);
+        $recordingplay = bigbluebuttonbn_broker_recording_play($params, $bbbsession['server']);
         echo $recordingplay;
         return;
     }

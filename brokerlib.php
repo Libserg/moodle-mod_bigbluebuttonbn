@@ -38,7 +38,7 @@ defined('MOODLE_INTERNAL') || die();
  */
 function bigbluebuttonbn_broker_meeting_info($bbbsession, $params, $updatecache) {
     $callbackresponse = array();
-    $info = bigbluebuttonbn_get_meeting_info($params['id'], $updatecache);
+    $info = bigbluebuttonbn_get_meeting_info($params['id'], $updatecache, $bbbsession['server']);
     $callbackresponse['info'] = $info;
     $running = false;
     if ($info['returncode'] == 'SUCCESS') {
@@ -120,13 +120,13 @@ function bigbluebuttonbn_broker_meeting_end($bbbsession, $params) {
         return;
     }
     // Execute the end command.
-    bigbluebuttonbn_end_meeting($params['id'], $bbbsession['modPW']);
+    bigbluebuttonbn_end_meeting($params['id'], $bbbsession['modPW'],$bbbsession['server']);
     // Moodle event logger: Create an event for meeting ended.
     if (isset($bbbsession['bigbluebuttonbn'])) {
         bigbluebuttonbn_event_log(\mod_bigbluebuttonbn\event\events::$events['meeting_end'], $bbbsession['bigbluebuttonbn']);
     }
     // Update the cache.
-    bigbluebuttonbn_get_meeting_info($params['id'], BIGBLUEBUTTONBN_UPDATE_CACHE);
+    bigbluebuttonbn_get_meeting_info($params['id'], BIGBLUEBUTTONBN_UPDATE_CACHE,$bbbsession['server']);
     $callbackresponse = array('status' => true);
     $callbackresponsedata = json_encode($callbackresponse);
     return "{$params['callback']}({$callbackresponsedata});";
@@ -177,7 +177,8 @@ function bigbluebuttonbn_broker_recording_info($bbbsession, $params, $showroom) 
     }
     $includedeleted = $bbbsession['bigbluebuttonbn']->recordings_deleted;
     // Retrieve the array of imported recordings.
-    $recordings = bigbluebuttonbn_get_allrecordings($courseid, $bigbluebuttonbnid, $showroom, $includedeleted);
+    $recordings = bigbluebuttonbn_get_allrecordings($courseid, $bigbluebuttonbnid, $showroom, $includedeleted,
+    	$bbbsession['server']);
     if (array_key_exists($params['id'], $recordings)) {
         // Look up for an update on the imported recording.
         if (!array_key_exists('messageKey', $recordings[$params['id']])) {
@@ -188,7 +189,7 @@ function bigbluebuttonbn_broker_recording_info($bbbsession, $params, $showroom) 
         return "{$params['callback']}({$callbackresponsedata});";
     }
     // As the recordingid was not identified as imported recording link, look up for a real recording.
-    $recordings = bigbluebuttonbn_get_recordings_array($params['idx'], $params['id']);
+    $recordings = bigbluebuttonbn_get_recordings_array($params['idx'], $params['id'], $bbbsession['server']);
     if (array_key_exists($params['id'], $recordings)) {
         // The recording was found.
         $callbackresponse = bigbluebuttonbn_broker_recording_info_current($recordings[$params['id']], $params);
@@ -229,9 +230,9 @@ function bigbluebuttonbn_broker_recording_info_current($recording, $params) {
  *
  * @return string
  */
-function bigbluebuttonbn_broker_recording_play($params) {
+function bigbluebuttonbn_broker_recording_play($params, $server) {
     $callbackresponse = array('status' => true, 'found' => false);
-    $recordings = bigbluebuttonbn_get_recordings_array($params['idx'], $params['id']);
+    $recordings = bigbluebuttonbn_get_recordings_array($params['idx'], $params['id'], $server);
     if (array_key_exists($params['id'], $recordings)) {
         // The recording was found.
         $callbackresponse = bigbluebuttonbn_broker_recording_info_current($recordings[$params['id']], $params);
@@ -264,9 +265,13 @@ function bigbluebuttonbn_broker_recording_action($bbbsession, $params, $showroom
         $bbbsession['course']->id,
         $bigbluebuttonbnid,
         $showroom,
-        $bbbsession['bigbluebuttonbn']->recordings_deleted
+	$bbbsession['bigbluebuttonbn']->recordings_deleted,
+	$bbbsession['server']
     );
-
+#    error_log("bigbluebuttonbn_broker_recording_action_perform records\n".print_r($recordings,1),
+#	    3,"/tmp/bbb_broker.log");
+#    error_log("bigbluebuttonbn_broker_recording_action_perform bbbsession\n".print_r($bbbsession,1),
+#	    3,"/tmp/bbb_broker.log");
     $action = strtolower($params['action']);
     // Excecute action.
     $callbackresponse = bigbluebuttonbn_broker_recording_action_perform($action, $params, $recordings);
@@ -326,7 +331,7 @@ function bigbluebuttonbn_broker_recording_action_publish($params, $recordings) {
         // Execute publish on imported recording link, if the real recording is published.
         $realrecordings = bigbluebuttonbn_get_recordings_array(
             $recordings[$params['id']]['meetingID'],
-            $recordings[$params['id']]['recordID']
+            $recordings[$params['id']]['recordID'],$recordings[$params['id']]['server']
         );
         // Only if the physical recording exist and it is published, execute publish on imported recording link.
         if (!isset($realrecordings[$params['id']])) {
@@ -352,7 +357,7 @@ function bigbluebuttonbn_broker_recording_action_publish($params, $recordings) {
     return array(
         'status' => bigbluebuttonbn_publish_recordings(
             $params['id'],
-            'true'
+            'true', $recordings[$params['id']]['server']
         )
     );
 }
@@ -370,7 +375,7 @@ function bigbluebuttonbn_broker_recording_action_unprotect($params, $recordings)
         // Execute unprotect on imported recording link, if the real recording is unprotected.
         $realrecordings = bigbluebuttonbn_get_recordings_array(
             $recordings[$params['id']]['meetingID'],
-            $recordings[$params['id']]['recordID']
+            $recordings[$params['id']]['recordID'],$recordings[$params['id']]['server']
         );
         // Only if the physical recording exist and it is published, execute unprotect on imported recording link.
         if (!isset($realrecordings[$params['id']])) {
@@ -396,7 +401,7 @@ function bigbluebuttonbn_broker_recording_action_unprotect($params, $recordings)
     return array(
         'status' => bigbluebuttonbn_update_recordings(
             $params['id'],
-            array('protect' => 'false')
+            array('protect' => 'false'),$recordings[$params['id']]['server']
         )
     );
 }
@@ -416,7 +421,7 @@ function bigbluebuttonbn_broker_recording_action_unpublish($params, $recordings)
         return array(
             'status' => bigbluebuttonbn_publish_recording_imported(
                 $recordings[$params['id']]['imported'],
-                false
+                false,$recordings[$params['id']]['server']
             )
         );
     }
@@ -435,7 +440,7 @@ function bigbluebuttonbn_broker_recording_action_unpublish($params, $recordings)
     return array(
         'status' => bigbluebuttonbn_publish_recordings(
             $params['id'],
-            'false'
+            'false', $recordings[$params['id']]['server']
         )
     );
 }
@@ -474,7 +479,7 @@ function bigbluebuttonbn_broker_recording_action_protect($params, $recordings) {
     return array(
         'status' => bigbluebuttonbn_update_recordings(
             $params['id'],
-            array('protect' => 'true')
+            array('protect' => 'true'),$recordings[$params['id']]['server']
         )
     );
 }
@@ -489,6 +494,11 @@ function bigbluebuttonbn_broker_recording_action_protect($params, $recordings) {
  */
 function bigbluebuttonbn_broker_recording_action_delete($params, $recordings) {
     global $DB;
+    if(!isset($recordings[$params['id']]['server']))
+	    throw new \Exception("bigbluebuttonbn_broker_recording_action_delete no server");
+    $server = $recordings[$params['id']]['server'];
+#    error_log("bigbluebuttonbn_broker_recording_action_delete param ".print_r($params,1),0);
+#    error_log("bigbluebuttonbn_broker_recording_action_delete rec keys ".print_r(array_keys($recordings),1),0);
     if (bigbluebuttonbn_broker_recording_is_imported($recordings, $params['id'])) {
         // Execute delete on imported recording link.
         return array(
@@ -508,7 +518,7 @@ function bigbluebuttonbn_broker_recording_action_delete($params, $recordings) {
     }
     // Second: Execute the actual delete.
     return array(
-        'status' => bigbluebuttonbn_delete_recordings($params['id'])
+        'status' => bigbluebuttonbn_delete_recordings($params['id'],$server)
     );
 }
 
@@ -537,7 +547,7 @@ function bigbluebuttonbn_broker_recording_action_edit($params, $recordings) {
     return array(
         'status' => bigbluebuttonbn_update_recordings(
             $params['id'],
-            json_decode($params['meta'])
+            json_decode($params['meta']),$recordings[$params['id']]['server']
         )
     );
 }

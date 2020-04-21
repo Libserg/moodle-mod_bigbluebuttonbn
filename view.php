@@ -58,7 +58,7 @@ $bbbsession['bigbluebuttonbn'] = $bigbluebuttonbn;
 bigbluebuttonbn_view_bbbsession_set($PAGE->context, $bbbsession);
 
 // Validates if the BigBlueButton server is working.
-$serverversion = bigbluebuttonbn_get_server_version();  // In locallib.
+$serverversion = bigbluebuttonbn_get_server_version($bigbluebuttonbn->server);  // In locallib.
 if ($serverversion === null) {
     $errmsg = 'view_error_unable_join_student';
     $errurl = '/course/view.php';
@@ -86,7 +86,7 @@ $PAGE->set_heading($course->fullname);
 
 /** @var core_renderer $OUTPUT */
 $OUTPUT;
-
+bigbluebuttonbn_check_stop($id,true);
 // Validate if the user is in a role allowed to join.
 if (!has_any_capability(['moodle/category:manage', 'mod/bigbluebuttonbn:join'], $PAGE->context)) {
     echo $OUTPUT->header();

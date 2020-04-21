@@ -128,7 +128,12 @@ class config {
      */
     public static function get($setting) {
         global $CFG;
-        if (isset($CFG->bigbluebuttonbn[$setting])) {
+	if($setting == 'shared_secret' || $setting == 'server_url') {
+		error_log(date("Y-M-d H:m:s",time())." get '$setting' from\n".
+			format_backtrace(debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT),1),0);
+		    throw new \Exception('bigbluebuttonbn_bad_config_option');
+	}
+	if (isset($CFG->bigbluebuttonbn[$setting])) {
             return (string)$CFG->bigbluebuttonbn[$setting];
         }
         if (isset($CFG->{'bigbluebuttonbn_'.$setting})) {
@@ -136,6 +141,54 @@ class config {
         }
         return self::defaultvalue($setting);
     }
+
+    public static function select_server() {
+	global $CFG;
+	$servers = array();
+	$last_server = 0;
+	for($i=1; $i < 10; $i++) {
+	   if(isset($CFG->bigbluebuttonbn['server_url'.$i]) &&
+	      isset($CFG->bigbluebuttonbn['shared_secret'.$i]) &&
+	      isset($CFG->bigbluebuttonbn['server_name'.$i])) {
+		$last_server = $i;
+		$servers[$i] = $CFG->bigbluebuttonbn['server_name'.$i];
+	   }
+	}
+	if(!$last_server &&
+	   isset($CFG->bigbluebuttonbn['server_url']) &&
+	   isset($CFG->bigbluebuttonbn['shared_secret']) &&
+	   isset($CFG->bigbluebuttonbn['server_name'])) {
+		$last_server = 1;
+		$servers[1] = $CFG->bigbluebuttonbn['server_name'];
+	}
+	return $last_server > 0 ? $servers : false;
+    }
+    public static function server_list() {
+	global $CFG;
+	$servers = array();
+	$last_server = 0;
+	for($i=1; $i < 10; $i++) {
+	   if(isset($CFG->bigbluebuttonbn['server_url'.$i]) &&
+	      isset($CFG->bigbluebuttonbn['shared_secret'.$i]) &&
+	      isset($CFG->bigbluebuttonbn['server_name'.$i])) {
+		$last_server = $i;
+		$servers[$i] = array($CFG->bigbluebuttonbn['server_url'.$i],
+				     $CFG->bigbluebuttonbn['shared_secret'.$i],
+				     $CFG->bigbluebuttonbn['server_name'.$i]);
+	   }
+	}
+	if(!$last_server &&
+	   isset($CFG->bigbluebuttonbn['server_url']) &&
+	   isset($CFG->bigbluebuttonbn['shared_secret']) &&
+	   isset($CFG->bigbluebuttonbn['server_name'])) {
+		$last_server = 1;
+		$servers[1]  = array($CFG->bigbluebuttonbn['server_url'],
+				     $CFG->bigbluebuttonbn['shared_secret'],
+				     $CFG->bigbluebuttonbn['server_name']);
+	}
+	return $last_server > 0 ? $servers : false;
+    }
+
 
     /**
      * Validates if recording settings are enabled.

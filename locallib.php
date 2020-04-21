@@ -107,6 +107,7 @@ function bigbluebuttonbn_get_join_url(
     $username,
     $pw,
     $logouturl,
+    $server = false,
     $configtoken = null,
     $userid = null,
     $clienttype = BIGBLUEBUTTON_CLIENTTYPE_FLASH
@@ -126,7 +127,7 @@ function bigbluebuttonbn_get_join_url(
     if (!is_null($userid)) {
         $data['userID'] = $userid;
     }
-    return \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('join', $data);
+    return \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('join', $data, array(), $server);
 }
 
 /**
@@ -139,8 +140,8 @@ function bigbluebuttonbn_get_join_url(
  *
  * @return array
  */
-function bigbluebuttonbn_get_create_meeting_array($data, $metadata = array(), $pname = null, $purl = null) {
-    $createmeetingurl = \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('create', $data, $metadata);
+function bigbluebuttonbn_get_create_meeting_array($data, $metadata = array(), $pname = null, $purl = null, $server=false) {
+    $createmeetingurl = \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('create', $data, $metadata, $server);
     $method = 'GET';
     $data = null;
     if (!is_null($pname) && !is_null($purl)) {
@@ -167,9 +168,10 @@ function bigbluebuttonbn_get_create_meeting_array($data, $metadata = array(), $p
  *
  * @return array
  */
-function bigbluebuttonbn_get_meeting_info_array($meetingid) {
+function bigbluebuttonbn_get_meeting_info_array($meetingid, $server=false) {
     $xml = bigbluebuttonbn_wrap_xml_load_file(
-        \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('getMeetingInfo', ['meetingID' => $meetingid])
+        \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('getMeetingInfo', ['meetingID' => $meetingid],
+             array(),$server)
     );
     if ($xml && $xml->returncode == 'SUCCESS' && empty($xml->messageKey)) {
         // Meeting info was returned.
@@ -204,7 +206,7 @@ function bigbluebuttonbn_get_meeting_info_array($meetingid) {
  *
  * @return associative array with recordings indexed by recordID, each recording is a non sequential associative array
  */
-function bigbluebuttonbn_get_recordings_array($meetingids, $recordingids = []) {
+function bigbluebuttonbn_get_recordings_array($meetingids, $recordingids = [], $server) {
     $meetingidsarray = $meetingids;
     if (!is_array($meetingids)) {
         $meetingidsarray = explode(',', $meetingids);
@@ -213,7 +215,7 @@ function bigbluebuttonbn_get_recordings_array($meetingids, $recordingids = []) {
     if (empty($meetingidsarray)) {
         return array();
     }
-    $recordings = bigbluebuttonbn_get_recordings_array_fetch($meetingidsarray);
+    $recordings = bigbluebuttonbn_get_recordings_array_fetch($meetingidsarray, $server);
     // Sort recordings.
     uasort($recordings, 'bigbluebuttonbn_recording_build_sorter');
     // Filter recordings based on recordingIDs.
@@ -235,7 +237,7 @@ function bigbluebuttonbn_get_recordings_array($meetingids, $recordingids = []) {
  *
  * @return array (associative) with recordings indexed by recordID, each recording is a non sequential associative array
  */
-function bigbluebuttonbn_get_recordings_array_fetch($meetingidsarray) {
+function bigbluebuttonbn_get_recordings_array_fetch($meetingidsarray, $server) {
     if ((defined('PHPUNIT_TEST') && PHPUNIT_TEST)
             || defined('BEHAT_SITE_RUNNING')
             || defined('BEHAT_TEST')
@@ -255,7 +257,7 @@ function bigbluebuttonbn_get_recordings_array_fetch($meetingidsarray) {
     }
     for ($page = 1; $page <= $pages; ++$page) {
         $mids = array_slice($meetingidsarray, ($page - 1) * $pagecount, $pagecount);
-        $recordings += bigbluebuttonbn_get_recordings_array_fetch_page($mids);
+        $recordings += bigbluebuttonbn_get_recordings_array_fetch_page($mids,$server);
     }
     return $recordings;
 }
@@ -267,23 +269,28 @@ function bigbluebuttonbn_get_recordings_array_fetch($meetingidsarray) {
  *
  * @return array
  */
-function bigbluebuttonbn_get_recordings_array_fetch_page($mids) {
+function bigbluebuttonbn_get_recordings_array_fetch_page($mids, $server) {
     $recordings = array();
+
+    if($server === false)
+	    throw new \Exception('bigbluebuttonbn_get_recordings_array_fetch_page server missing');
     // Do getRecordings is executed using a method GET (supported by all versions of BBB).
-    $url = \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('getRecordings', ['meetingID' => implode(',', $mids)]);
+    $url = \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('getRecordings', ['meetingID' => implode(',', $mids)],
+	    array(),$server);
     $xml = bigbluebuttonbn_wrap_xml_load_file($url);
     if ($xml && $xml->returncode == 'SUCCESS' && isset($xml->recordings)) {
         // If there were meetings already created.
         foreach ($xml->recordings->recording as $recordingxml) {
             $recording = bigbluebuttonbn_get_recording_array_value($recordingxml);
             $recordings[$recording['recordID']] = $recording;
+            $recordings[$recording['recordID']]['server'] = $server;
 
             // Check if there is childs.
             if (isset($recordingxml->breakoutRooms->breakoutRoom)) {
                 foreach ($recordingxml->breakoutRooms->breakoutRoom as $breakoutroom) {
                     $url = \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url(
                         'getRecordings',
-                        ['recordID' => implode(',', (array) $breakoutroom)]
+                        ['recordID' => implode(',', (array) $breakoutroom)], array(), $server
                     );
                     $xml = bigbluebuttonbn_wrap_xml_load_file($url);
                     if ($xml && $xml->returncode == 'SUCCESS' && isset($xml->recordings)) {
@@ -351,9 +358,10 @@ function bigbluebuttonbn_get_recordings_imported_array($courseid = 0, $bigbluebu
  *
  * @return string
  */
-function bigbluebuttonbn_get_default_config_xml() {
+function bigbluebuttonbn_get_default_config_xml($sever=false) {
     $xml = bigbluebuttonbn_wrap_xml_load_file(
-        \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('getDefaultConfigXML')
+        \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('getDefaultConfigXML',
+             array(),array(),$server)
     );
     return $xml;
 }
@@ -453,13 +461,18 @@ function bigbluebuttonbn_recording_build_sorter($a, $b) {
  *
  * @return boolean
  */
-function bigbluebuttonbn_delete_recordings($recordids) {
+function bigbluebuttonbn_delete_recordings($recordids, $server = false) {
     $ids = explode(',', $recordids);
+    if($server === false) {
+	throw new \Exception("bigbluebuttonbn_delete_recordings server missing");
+    }
+
     foreach ($ids as $id) {
         $xml = bigbluebuttonbn_wrap_xml_load_file(
-            \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('deleteRecordings', ['recordID' => $id])
+            \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('deleteRecordings', ['recordID' => $id],
+                 array(), $server)
         );
-        if ($xml && $xml->returncode != 'SUCCESS') {
+	if ($xml && $xml->returncode != 'SUCCESS') {
             return false;
         }
     }
@@ -472,11 +485,12 @@ function bigbluebuttonbn_delete_recordings($recordids) {
  * @param string $recordids
  * @param string $publish
  */
-function bigbluebuttonbn_publish_recordings($recordids, $publish = 'true') {
+function bigbluebuttonbn_publish_recordings($recordids, $publish = 'true', $server=false) {
     $ids = explode(',', $recordids);
     foreach ($ids as $id) {
         $xml = bigbluebuttonbn_wrap_xml_load_file(
-            \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('publishRecordings', ['recordID' => $id, 'publish' => $publish])
+	    \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('publishRecordings', ['recordID' => $id, 'publish' => $publish],
+		array(),$server)
         );
         if ($xml && $xml->returncode != 'SUCCESS') {
             return false;
@@ -491,11 +505,12 @@ function bigbluebuttonbn_publish_recordings($recordids, $publish = 'true') {
  * @param string $recordids
  * @param array $params ['key'=>param_key, 'value']
  */
-function bigbluebuttonbn_update_recordings($recordids, $params) {
+function bigbluebuttonbn_update_recordings($recordids, $params, $server=false) {
     $ids = explode(',', $recordids);
     foreach ($ids as $id) {
         $xml = bigbluebuttonbn_wrap_xml_load_file(
-            \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('updateRecordings', ['recordID' => $id] + (array) $params)
+            \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('updateRecordings', ['recordID' => $id] + (array) $params,
+                 array(), $server)
         );
         if ($xml && $xml->returncode != 'SUCCESS') {
             return false;
@@ -510,9 +525,10 @@ function bigbluebuttonbn_update_recordings($recordids, $params) {
  * @param string $meetingid
  * @param string $modpw
  */
-function bigbluebuttonbn_end_meeting($meetingid, $modpw) {
+function bigbluebuttonbn_end_meeting($meetingid, $modpw, $server=false) {
     $xml = bigbluebuttonbn_wrap_xml_load_file(
-        \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('end', ['meetingID' => $meetingid, 'password' => $modpw])
+        \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('end', ['meetingID' => $meetingid, 'password' => $modpw],
+             array(), $server)
     );
     if ($xml) {
         // If the xml packet returned failure it displays the message to the user.
@@ -527,9 +543,9 @@ function bigbluebuttonbn_end_meeting($meetingid, $modpw) {
  *
  * @return string
  */
-function bigbluebuttonbn_get_server_version() {
+function bigbluebuttonbn_get_server_version($server=false) {
     $xml = bigbluebuttonbn_wrap_xml_load_file(
-        \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url()
+        \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('', array(), array(), $server)
     );
     if ($xml && $xml->returncode == 'SUCCESS') {
         return $xml->version;
@@ -622,8 +638,8 @@ function bigbluebuttonbn_wrap_xml_load_file_curl_request($url, $method = 'GET', 
  */
 function bigbluebuttonbn_end_meeting_if_running($bigbluebuttonbn) {
     $meetingid = $bigbluebuttonbn->meetingid . '-' . $bigbluebuttonbn->course . '-' . $bigbluebuttonbn->id;
-    if (bigbluebuttonbn_is_meeting_running($meetingid)) {
-        bigbluebuttonbn_end_meeting($meetingid, $bigbluebuttonbn->moderatorpass);
+    if (bigbluebuttonbn_is_meeting_running($meetingid, false, $bigbluebuttonbn->server)) {
+        bigbluebuttonbn_end_meeting($meetingid, $bigbluebuttonbn->moderatorpass,$bigbluebuttonbn->server);
     }
 }
 
@@ -1211,7 +1227,7 @@ function bigbluebuttonbn_participant_joined($meetingid, $ismoderator) {
  *
  * @return array
  */
-function bigbluebuttonbn_get_meeting_info($meetingid, $updatecache = false) {
+function bigbluebuttonbn_get_meeting_info($meetingid, $updatecache = false, $server=false) {
     $cachettl = (int) \mod_bigbluebuttonbn\locallib\config::get('waitformoderator_cache_ttl');
     $cache = cache::make_from_params(cache_store::MODE_APPLICATION, 'mod_bigbluebuttonbn', 'meetings_cache');
     $result = $cache->get($meetingid);
@@ -1222,7 +1238,8 @@ function bigbluebuttonbn_get_meeting_info($meetingid, $updatecache = false) {
     }
     // Ping again and refresh the cache.
     $meetinginfo = (array) bigbluebuttonbn_wrap_xml_load_file(
-        \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('getMeetingInfo', ['meetingID' => $meetingid])
+        \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('getMeetingInfo', ['meetingID' => $meetingid],
+             array(), $server)
     );
     $cache->set($meetingid, array('creation_time' => time(), 'meeting_info' => json_encode($meetinginfo)));
     return $meetinginfo;
@@ -1236,11 +1253,11 @@ function bigbluebuttonbn_get_meeting_info($meetingid, $updatecache = false) {
  *
  * @return boolean
  */
-function bigbluebuttonbn_is_meeting_running($meetingid, $updatecache = false) {
+function bigbluebuttonbn_is_meeting_running($meetingid, $updatecache = false, $server=false) {
     /* As a workaround to isMeetingRunning that always return SUCCESS but only returns true
      * when at least one user is in the session, we use getMeetingInfo instead.
      */
-    $meetinginfo = bigbluebuttonbn_get_meeting_info($meetingid, $updatecache);
+    $meetinginfo = bigbluebuttonbn_get_meeting_info($meetingid, $updatecache, $server);
     return ($meetinginfo['returncode'] === 'SUCCESS');
 }
 
@@ -1717,10 +1734,10 @@ function bigbluebuttonbn_get_recording_type_text($playbacktype) {
  */
 function bigbluebuttonbn_is_valid_resource($url) {
     $urlhost = parse_url($url, PHP_URL_HOST);
-    $serverurlhost = parse_url(\mod_bigbluebuttonbn\locallib\config::get('server_url'), PHP_URL_HOST);
-    // Skip validation when the recording URL host is the same as the configured BBB server.
-    if ($urlhost == $serverurlhost) {
-        return true;
+    $bbbservers = \mod_bigbluebuttonbn\locallib\config::server_list();
+    foreach ($bbbservers as $s) {
+        // Skip validation when the recording URL host is the same as the configured BBB server.
+	if($s[0] == $urlhost) return true;
     }
     // Skip validation when the recording URL was already validated.
     $validatedurls = bigbluebuttonbn_cache_get('recordings_cache', 'validated_urls', array());
@@ -2158,6 +2175,7 @@ function bigbluebuttonbn_is_bn_server() {
     if (\mod_bigbluebuttonbn\locallib\config::get('bn_server')) {
         return true;
     }
+if(0) {
     $parsedurl = parse_url(\mod_bigbluebuttonbn\locallib\config::get('server_url'));
     if (!isset($parsedurl['host'])) {
         return false;
@@ -2166,6 +2184,8 @@ function bigbluebuttonbn_is_bn_server() {
     $hends = explode('.', $h);
     $hendslength = count($hends);
     return ($hends[$hendslength - 1] == 'com' && $hends[$hendslength - 2] == 'blindsidenetworks');
+}
+    return false;
 }
 
 /**
@@ -2332,8 +2352,9 @@ function bigbluebuttonbn_get_recordings_imported_sql_select($courseid = 0, $bigb
  * @return associative array containing the recordings indexed by recordID, each recording is also a
  * non sequential associative array itself that corresponds to the actual recording in BBB
  */
-function bigbluebuttonbn_get_allrecordings($courseid = 0, $bigbluebuttonbnid = null, $subset = true, $includedeleted = false) {
-    $recordings = bigbluebuttonbn_get_recordings($courseid, $bigbluebuttonbnid, $subset, $includedeleted);
+function bigbluebuttonbn_get_allrecordings($courseid = 0, $bigbluebuttonbnid = null, $subset = true, $includedeleted = false,$server=false) {
+    $recordings = bigbluebuttonbn_get_recordings($courseid, $bigbluebuttonbnid, $subset, $includedeleted,$server);
+#    error_log("bigbluebuttonbn_get_allrecordings ".print_r($recordings,1),3,"/tmp/bbb_broker.log");
     $recordingsimported = bigbluebuttonbn_get_recordings_imported_array($courseid, $bigbluebuttonbnid, $subset);
     return ($recordings + $recordingsimported);
 }
@@ -2350,9 +2371,27 @@ function bigbluebuttonbn_get_allrecordings($courseid = 0, $bigbluebuttonbnid = n
  * @return associative array containing the recordings indexed by recordID, each recording is also a
  * non sequential associative array itself that corresponds to the actual recording in BBB
  */
-function bigbluebuttonbn_get_recordings($courseid = 0, $bigbluebuttonbnid = null, $subset = true, $includedeleted = false) {
+function bigbluebuttonbn_get_recordings($courseid = 0, $bigbluebuttonbnid = null, $subset = true, $includedeleted = false, $server=false) {
     global $DB;
     $select = bigbluebuttonbn_get_recordings_sql_select($courseid, $bigbluebuttonbnid, $subset);
+    if($server === false) {
+	$bbbinfo = $DB->get_records_select('bigbluebuttonbn', $select, null, 'id', 'id, meetingid, server');
+#	error_log("bigbluebuttonbn_get_recordings find srv ".print_r($bbbinfo,1),0);
+	foreach($bbbinfo as $b) {
+	    if($b->server > 0) {
+	        if($server === false) {
+	    	    $server = $b->server;	
+	        } else {
+	    	    if($server != $b->server) throw new \Exception("bigbluebuttonbn_get_recordings change server");
+	        }
+	    } else {
+	    	throw new \Exception("bigbluebuttonbn_get_recordings server 0");
+	    }
+	}
+	if($server === false) {
+	        throw new \Exception("bigbluebuttonbn_get_recordings cant get server!");
+	}
+    }
     $bigbluebuttonbns = $DB->get_records_select_menu('bigbluebuttonbn', $select, null, 'id', 'id, meetingid');
     /* Consider logs from deleted bigbluebuttonbn instances whose meetingids should be included in
      * the getRecordings request. */
@@ -2383,7 +2422,7 @@ function bigbluebuttonbn_get_recordings($courseid = 0, $bigbluebuttonbnid = null
     // Execute select for loading records based on existent bigbluebuttonbns.
     $records = $DB->get_records_sql_menu($sql, array(BIGBLUEBUTTONBN_LOG_EVENT_CREATE, '%record%', '%true%'));
     // Get actual recordings.
-    return bigbluebuttonbn_get_recordings_array(array_keys($records));
+    return bigbluebuttonbn_get_recordings_array(array_keys($records), [], $server);
 }
 
 /**
@@ -3220,7 +3259,7 @@ function bigbluebuttonbn_user_can_join_meeting($bigbluebuttonbn, $mid = null, $u
         $mid = $bigbluebuttonbn->meetingid . '-' . $bigbluebuttonbn->course . '-' . $bigbluebuttonbn->id;
     }
     // When meeting is running, all authorized users can join right in.
-    if (bigbluebuttonbn_is_meeting_running($mid)) {
+    if (bigbluebuttonbn_is_meeting_running($mid,false,$bigbluebuttonbn->server)) {
         return array(true, get_string('view_message_conference_in_progress', 'bigbluebuttonbn'));
     }
     // When meeting is not running, see if the user can join.
@@ -3316,6 +3355,7 @@ function bigbluebuttonbn_view_bbbsession_set($context, &$bbbsession) {
     // Database info related to the activity.
     $bbbsession['meetingid'] = $bbbsession['bigbluebuttonbn']->meetingid . '-' . $bbbsession['course']->id . '-' .
     $bbbsession['bigbluebuttonbn']->id;
+    $bbbsession['server'] = $bbbsession['bigbluebuttonbn']->server;
     $bbbsession['meetingname'] = $bbbsession['bigbluebuttonbn']->name;
     $bbbsession['meetingdescription'] = $bbbsession['bigbluebuttonbn']->intro;
     // Extra data for setting up the Meeting.
@@ -3485,4 +3525,20 @@ function bigbluebuttonbn_create_meeting_metadata(&$bbbsession) {
         $metadata['analytics-callback-url'] = $bbbsession['meetingEventsURL'];
     }
     return $metadata;
+}
+
+function bigbluebuttonbn_check_stop($id,$stop = false) {
+global $CFG,$OUTPUT;
+if(file_exists($CFG->dataroot . '/bbbctl/stop')) {
+    $stop_msg = file_get_contents($CFG->dataroot . '/bbbctl/stop');
+    echo $OUTPUT->header();
+    echo $OUTPUT->box_start('block').'<h2>';
+    echo $OUTPUT->box(get_string('view_stop_join','bigbluebuttonbn',$stop_msg));
+    echo '</h2>'.$OUTPUT->box_end();
+    // Output finishes.
+    echo $OUTPUT->footer();
+    if($stop) exit;
+    return 1;
+}
+return 0;
 }

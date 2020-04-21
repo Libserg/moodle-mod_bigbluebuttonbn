@@ -71,7 +71,7 @@ if ($action === 'end') {
             $meetingid .= sprintf('[%d]', $g);
         }
 
-        bigbluebuttonbn_end_meeting($meetingid, $bigbluebuttonbn->moderatorpass);
+        bigbluebuttonbn_end_meeting($meetingid, $bigbluebuttonbn->moderatorpass, $bigbluebuttonbn->server);
         redirect($PAGE->url);
     }
 }

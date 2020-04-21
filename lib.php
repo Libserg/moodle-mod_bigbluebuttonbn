@@ -519,9 +519,17 @@ function bigbluebuttonbn_reset_logs($courseid) {
 function bigbluebuttonbn_reset_recordings($courseid) {
     require_once(__DIR__.'/locallib.php');
     // Criteria for search [courseid | bigbluebuttonbn=null | subset=false | includedeleted=true].
-    $recordings = bigbluebuttonbn_get_recordings($courseid, null, false, true);
-    // Remove all the recordings.
-    bigbluebuttonbn_delete_recordings(implode(",", array_keys($recordings)));
+    $bsrv = \mod_bigbluebuttonbn\locallib\config::server_list();
+    if(!$bsrv) return;
+    foreach($bsrv as $server => $sinfo) {
+	$recordings = bigbluebuttonbn_get_recordings($courseid, null, false, true, $server);
+	// Remove all the recordings.
+	if(count($recordings) > 0) {
+	    error_log("bigbluebuttonbn_reset_recordings $courseid ".
+			print_r(array_keys($recordings),1),0);
+	    bigbluebuttonbn_delete_recordings(implode(",", array_keys($recordings)),$server);
+	}
+    }
 }
 
 /**

@@ -46,13 +46,15 @@ class mod_bigbluebuttonbn_mod_form extends moodleform_mod {
         global $CFG, $DB, $OUTPUT, $PAGE;
         $mform = &$this->_form;
 
+if(0) {
         // Validates if the BigBlueButton server is running.
         $serverversion = bigbluebuttonbn_get_server_version();
         if (is_null($serverversion)) {
             print_error('general_error_unable_connect', 'bigbluebuttonbn',
                 $CFG->wwwroot.'/admin/settings.php?section=modsettingbigbluebuttonbn');
             return;
-        }
+	}
+}
         // Context.
         $bigbluebuttonbn = null;
         $course = get_course($this->current->course);
@@ -77,6 +79,7 @@ class mod_bigbluebuttonbn_mod_form extends moodleform_mod {
             return;
         }
         $this->bigbluebuttonbn_mform_add_block_profiles($mform, $jsvars['instanceTypeProfiles']);
+        $this->bigbluebuttonbn_mform_add_block_server($mform, $bigbluebuttonbn);
         // Data for participant selection.
         $participantlist = bigbluebuttonbn_get_participant_list($bigbluebuttonbn, $context);
         // Add block 'General'.
@@ -159,6 +162,14 @@ class mod_bigbluebuttonbn_mod_form extends moodleform_mod {
             if (!bigbluebuttonbn_voicebridge_unique($data['instance'], $data['voicebridge'])) {
                 $errors['voicebridge'] = get_string('mod_form_field_voicebridge_notunique_error', 'bigbluebuttonbn');
             }
+        }
+        if (isset($data['userlimit'])) {
+            if(intval($data['userlimit']) > 120) {
+                $errors['userlimit'] = 'We have a limit 120 users per room.';
+            }
+        }
+        if (!isset($data['server']) || !intval($data['server']) ) {
+                $errors['server'] = 'Server not selected.';
         }
         return $errors;
     }
@@ -253,7 +264,20 @@ class mod_bigbluebuttonbn_mod_form extends moodleform_mod {
                 bigbluebuttonbn_get_instance_profiles_array($profiles),
                 array('onchange' => 'M.mod_bigbluebuttonbn.modform.updateInstanceTypeProfile(this);'));
             $mform->addHelpButton('type', 'mod_form_field_instanceprofiles', 'bigbluebuttonbn');
-        }
+	}
+    }
+    private function bigbluebuttonbn_mform_add_block_server(&$mform, $modbbb) {
+	$bbbsrv = \mod_bigbluebuttonbn\locallib\config::select_server();
+	if($bbbsrv !== false) {
+	    $bbbsrv[0] = 'Not select';
+            $mform->addElement('select', 'server', 'server',$bbbsrv);
+	    $mform->addHelpButton('server', 'server', 'bigbluebuttonbn');
+	    $mform->setType('server', PARAM_INT);
+	    $mform->addRule('server', 'Must be selected', 'required',null,'client');
+	} else {
+            $mform->addElement('hidden', 'server', 1);
+	    $mform->setType('server', PARAM_INT);
+	}
     }
 
     /**

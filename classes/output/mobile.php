@@ -111,7 +111,7 @@ class mobile {
         }
 
         // Check if the BBB server is working.
-        $serverversion = bigbluebuttonbn_get_server_version();
+        $serverversion = bigbluebuttonbn_get_server_version($bigbluebuttonbn->server);
         $bbbsession['serverversion'] = (string) $serverversion;
         if (is_null($serverversion)) {
 
@@ -159,14 +159,14 @@ class mobile {
         }
 
         // See if the BBB session is already in progress.
-        if (!bigbluebuttonbn_is_meeting_running($bbbsession['meetingid'])) {
+        if (!bigbluebuttonbn_is_meeting_running($bbbsession['meetingid'],false,$bbbsession['server'])) {
 
             // The meeting doesnt exist in BBB server, must be created.
             $response = bigbluebuttonbn_get_create_meeting_array(
                 \mod_bigbluebuttonbn\locallib\mobileview::create_meeting_data($bbbsession),
                 \mod_bigbluebuttonbn\locallib\mobileview::create_meeting_metadata($bbbsession),
                 $bbbsession['presentation']['name'],
-                $bbbsession['presentation']['url']
+                $bbbsession['presentation']['url'],$bbbsession['server']
             );
 
             if (empty($response)) {
@@ -201,7 +201,7 @@ class mobile {
 
         // It is part of 'bigbluebuttonbn_bbb_view_join_meeting' in bbb_view.
         // Update the cache.
-        $meetinginfo = bigbluebuttonbn_get_meeting_info($bbbsession['meetingid'], BIGBLUEBUTTONBN_UPDATE_CACHE);
+        $meetinginfo = bigbluebuttonbn_get_meeting_info($bbbsession['meetingid'], BIGBLUEBUTTONBN_UPDATE_CACHE,$bbbsession['server']);
         if ($bbbsession['userlimit'] > 0 && intval($meetinginfo['participantCount']) >= $bbbsession['userlimit']) {
             // No more users allowed to join.
             $message = get_string('view_error_userlimit_reached', 'bigbluebuttonbn');
