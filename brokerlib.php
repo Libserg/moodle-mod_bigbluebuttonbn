@@ -230,12 +230,29 @@ function bigbluebuttonbn_broker_recording_info_current($recording, $params) {
  *
  * @return string
  */
-function bigbluebuttonbn_broker_recording_play($params, $server) {
+function bigbluebuttonbn_broker_recording_play($params, $server = false) {
+    global $DB;
     $callbackresponse = array('status' => true, 'found' => false);
-    $recordings = bigbluebuttonbn_get_recordings_array($params['idx'], $params['id'], $server);
-    if (array_key_exists($params['id'], $recordings)) {
-        // The recording was found.
-        $callbackresponse = bigbluebuttonbn_broker_recording_info_current($recordings[$params['id']], $params);
+    if($server !== false) {
+	$recordings = bigbluebuttonbn_get_recordings_array($params['idx'], $params['id'], $server);
+	if (array_key_exists($params['id'], $recordings)) {
+            $callbackresponse = bigbluebuttonbn_broker_recording_info_current($recordings[$params['id']], $params);
+	}
+    } else {
+	#error_log("bigbluebuttonbn_broker_recording_play server $server".print_r($params,1),3,"/tmp/bbb_broker.log");
+	$sql = "select bl.server from {bigbluebuttonbn_logs} as bl ";
+	$sql .= " inner join {bigbluebuttonbn} as b on b.id=bl.bigbluebuttonbnid where bl.meetingid = ? ";
+	$sql .= ' AND log = ? AND meta LIKE ? AND meta LIKE ?';
+	$rinfo = $DB->get_records_sql($sql, array($params['idx'],BIGBLUEBUTTONBN_LOG_EVENT_CREATE, '%record%', '%true%'));
+#	error_log("bigbluebuttonbn_broker_recording_play ".print_r($rinfo,1),3,"/tmp/bbb_broker.log");
+	foreach($rinfo as $r) {
+	    $recordings = bigbluebuttonbn_get_recordings_array($params['idx'], $params['id'], $r->server);
+	     if (array_key_exists($params['id'], $recordings)) {
+		// The recording was found.
+		$callbackresponse = bigbluebuttonbn_broker_recording_info_current($recordings[$params['id']], $params);
+		break;
+	    }
+	}
     }
     $callbackresponsedata = json_encode($callbackresponse);
     return "{$params['callback']}({$callbackresponsedata});";

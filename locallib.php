@@ -1688,7 +1688,7 @@ function bigbluebuttonbn_get_recording_data_row_type($recording, $bbbsession, $p
     }
     $text = bigbluebuttonbn_get_recording_type_text($playback['type']);
     $href = $CFG->wwwroot . '/mod/bigbluebuttonbn/bbb_view.php?action=play&bn=' . $bbbsession['bigbluebuttonbn']->id .
-        '&mid=' . $recording['meetingID'] . '&rid=' . $recording['recordID'] . '&rtype=' . $playback['type'];
+        '&mid=' . $recording['meetingID'] . '&rid=' . $recording['recordID'] . '&rtype=' . $playback['type'];#.'&server='.$recording['server'];
     if (!isset($recording['imported']) || !isset($recording['protected']) || $recording['protected'] === 'false') {
         $href .= '&href=' . urlencode(trim($playback['url']));
     }
@@ -1697,6 +1697,7 @@ function bigbluebuttonbn_get_recording_data_row_type($recording, $bbbsession, $p
         'class' => 'btn btn-sm btn-default',
         'onclick' => 'M.mod_bigbluebuttonbn.recordings.recordingPlay(this);',
         'data-action' => 'play',
+        'data-server' => $recording['server'],
         'data-target' => $playback['type'],
         'data-href' => $href,
       );
@@ -2374,24 +2375,6 @@ function bigbluebuttonbn_get_allrecordings($courseid = 0, $bigbluebuttonbnid = n
 function bigbluebuttonbn_get_recordings($courseid = 0, $bigbluebuttonbnid = null, $subset = true, $includedeleted = false, $server=false) {
     global $DB;
     $select = bigbluebuttonbn_get_recordings_sql_select($courseid, $bigbluebuttonbnid, $subset);
-    if($server === false) {
-	$bbbinfo = $DB->get_records_select('bigbluebuttonbn', $select, null, 'id', 'id, meetingid, server');
-#	error_log("bigbluebuttonbn_get_recordings find srv ".print_r($bbbinfo,1),0);
-	foreach($bbbinfo as $b) {
-	    if($b->server > 0) {
-	        if($server === false) {
-	    	    $server = $b->server;	
-	        } else {
-	    	    if($server != $b->server) throw new \Exception("bigbluebuttonbn_get_recordings change server");
-	        }
-	    } else {
-	    	throw new \Exception("bigbluebuttonbn_get_recordings server 0");
-	    }
-	}
-	if($server === false) {
-	        throw new \Exception("bigbluebuttonbn_get_recordings cant get server!");
-	}
-    }
     $bigbluebuttonbns = $DB->get_records_select_menu('bigbluebuttonbn', $select, null, 'id', 'id, meetingid');
     /* Consider logs from deleted bigbluebuttonbn instances whose meetingids should be included in
      * the getRecordings request. */
@@ -2415,14 +2398,29 @@ function bigbluebuttonbn_get_recordings($courseid = 0, $bigbluebuttonbnid = null
         return array();
     }
     // Prepare select for loading records based on existent bigbluebuttonbns.
-    $sql = 'SELECT DISTINCT meetingid, bigbluebuttonbnid FROM {bigbluebuttonbn_logs} WHERE ';
+    $sql = 'SELECT DISTINCT on(meetingid, server) id, meetingid, server, bigbluebuttonbnid FROM {bigbluebuttonbn_logs} WHERE ';
     $sql .= '(bigbluebuttonbnid=' . implode(' OR bigbluebuttonbnid=', array_keys($bigbluebuttonbns)) . ')';
     // Include only Create events and exclude those with record not true.
     $sql .= ' AND log = ? AND meta LIKE ? AND meta LIKE ?';
     // Execute select for loading records based on existent bigbluebuttonbns.
-    $records = $DB->get_records_sql_menu($sql, array(BIGBLUEBUTTONBN_LOG_EVENT_CREATE, '%record%', '%true%'));
+
+    $rinfo = $DB->get_records_sql($sql, array(BIGBLUEBUTTONBN_LOG_EVENT_CREATE, '%record%', '%true%'));
+    #error_log("bigbluebuttonbn_get_recordings list '$sql' ".print_r($rinfo,1),0);
+    $ret = array();
+    $sql = 'SELECT DISTINCT meetingid, bigbluebuttonbnid FROM {bigbluebuttonbn_logs} WHERE ';
+    $sql .= ' server = ? and (bigbluebuttonbnid=' . implode(' OR bigbluebuttonbnid=', array_keys($bigbluebuttonbns)) . ')';
+    $sql .= ' AND log = ? AND meta LIKE ? AND meta LIKE ?';
+    // Execute select for loading records based on existent bigbluebuttonbns.
+    foreach($rinfo as $id => $r) {
+		   
+	    $records = $DB->get_records_sql_menu($sql, array($r->server,BIGBLUEBUTTONBN_LOG_EVENT_CREATE, '%record%', '%true%'));
+	    # error_log("bigbluebuttonbn_get_recordings list server {$r->server} ".print_r($records,1),0);
+	    $rs = bigbluebuttonbn_get_recordings_array(array_keys($records), [], $r->server);
+	    if(count($rs) > 0)
+		    $ret = array_merge($ret,$rs);
+    }
     // Get actual recordings.
-    return bigbluebuttonbn_get_recordings_array(array_keys($records), [], $server);
+    return $ret;
 }
 
 /**

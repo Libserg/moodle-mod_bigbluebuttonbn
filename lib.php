@@ -1192,6 +1192,7 @@ function bigbluebuttonbn_log($bigbluebuttonbn, $event, array $overrides = [], $m
     $log->timecreated = time();
     $log->log = $event;
     $log->meta = $meta;
+    $log->server = $bigbluebuttonbn->server;
     // Overrides.
     foreach ($overrides as $key => $value) {
         $log->$key = $value;

@@ -44,6 +44,10 @@ M.mod_bigbluebuttonbn.broker = {
 
     recordingActionPerform: function(data) {
         var qs = "action=recording_" + data.action + "&id=" + data.recordingid + "&idx=" + data.meetingid;
+        if (typeof data.datasetr !== 'undefined' &&
+            typeof data.dataset.server !== 'undefined') {
+            qs += "&server=" + data.dataset.server;
+	}
         qs += this.recordingActionMetaQS(data);
         data.attempt = 1;
         if (typeof data.attempts === 'undefined') {
