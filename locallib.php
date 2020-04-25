@@ -130,6 +130,163 @@ function bigbluebuttonbn_get_join_url(
     return \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('join', $data, array(), $server);
 }
 
+
+function bbb_request_fast($url) {
+	if (extension_loaded('curl')) {
+	    $ch = curl_init($url);
+	    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: text/xml'));
+	    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+	    curl_setopt($ch, CURLOPT_TIMEOUT , 3);
+	    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT , 1);
+	    curl_setopt($ch, CURLOPT_RETURNTRANSFER , true);
+	    $ret = curl_exec($ch);
+	    curl_close($ch);
+	    return $ret;
+	} else {
+	    return '<response><returncode>ERROR</returncode><meetings/>'.
+		   '<message>Missing CURL extension.</message></response>';
+	}
+}
+
+function bbb_get_server_info_real($n) {
+
+	$res = bbb_request_fast(
+		\mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('getMeetings',[],[],$n)
+	);
+
+        $previous = libxml_use_internal_errors(true);
+        try {
+	    $ret = simplexml_load_string($res,'SimpleXMLElement', LIBXML_NOCDATA | LIBXML_NOBLANKS);
+        } catch (Exception $e) {
+            libxml_use_internal_errors($previous);
+            $error = 'Caught exception: ' . $e->getMessage();
+            debugging($error, DEBUG_DEVELOPER);
+            return array(0=>0,'MSG'=>'Bad xml response');
+        }
+	if(!(isset($ret->returncode) && $ret->returncode == 'SUCCESS')) {
+	    return array(0=>0,'MSG'=>isset($ret->message) ? $ret->message:'Error');
+	}
+	#print_r($ret);
+	$m_count = 0;
+	$m_list = 0;
+	$m_list_max = 0;
+	$m_video = 0;
+	$m_video_max = 0;
+	$trc = 0;
+	$m_info = array();
+	foreach ($ret->meetings as $m) {
+	   foreach ($m->meeting as $i) {
+		#print_r($i);
+		$m_count++;
+		$m_c = intval($i->participantCount); # $i->videoCount + $i->moderatorCount + $i->listenerCount;
+		$m_v = intval($i->videoCount);
+		$m_m = intval($i->moderatorCount);
+		$m_list += $m_c;
+		$m_video += $m_v;
+		if($m_list_max < $m_c ) $m_list_max = $m_c;
+		if($m_video_max < $m_v) $m_video_max = $m_v;
+		$rc = $m_c + ($m_v + ($m_v > 4 ? $m_v/3 : 0)) * 10;
+		$trc += $rc;
+	        $m_info[] = array('Name'=> $i->meetingName . '',
+			'LMS'=>((array)$i->metadata)['bbb-context'],
+			'Users'=>$m_c,
+			'Videos'=>$m_v,
+			'Moderators'=>intval($i->moderatorCount),
+			'StartTime'=>date('Y-m-d H:i:s',intval(intval($i->startTime)/1000)),
+			'imID'=>strval($i->internalMeetingID),
+			'emID'=>strval($i->meetingID));
+
+	   }
+	}
+	#error_log("BBB_Get_Info ($n) MC=$m_count LC=$m_list LM=$m_list_max VC=$m_video VM=$m_video_max\n",0);
+	return array(0=>1,'time'=>time(), 'info'=>$m_info, 'RC'=>$trc, 'MC'=>$m_count, 'LC'=>$m_list, 
+		     'LM'=>$m_list_max, 'VC'=>$m_video, 'VM'=>$m_video_max);
+}
+
+function bbb_get_server_info($n) {
+	global $CFG;
+	$cachedir = $CFG->dataroot.'/bbbcache';
+	if(!is_dir($cachedir)) {
+	    if(!mkdir($cachedir,0755))
+		throw new \Exception("Cant create $cachedir");
+	}
+	$cachefile = $cachedir.'/server_'.$n;
+	clearstatcache(false,$cachefile);
+	$data = file_exists($cachefile) ? file_get_contents($cachefile,0): false;
+	if($data !== false) {
+		$info = unserialize($data);
+		if(isset($info['time']) && $info['time'] > time()-5) {
+			#error_log("BBB_Get_Info ($n) cache\n",0);
+			return $info;
+		}
+	}
+	$info = bbb_get_server_info_real($n);
+	if($info[0]) {
+		file_put_contents($cachefile,serialize($info));
+	}
+	return $info;
+}
+
+function bbb_select_server() {
+	$server_list = \mod_bigbluebuttonbn\locallib\config::server_list();
+	$load = [];
+	$min_rc = false;
+	$s_rc = false;
+	foreach($server_list as $k=>$s) {
+		$load[$k] = bbb_get_server_info($k,$s);
+		if(!$load[$k][0]) continue;
+		if($s_rc === false || $load[$k]['RC'] < $min_rc) {
+			$s_rc = $k;
+			$min_rc = $load[$k]['RC'];
+		}
+	}
+	return $s_rc;
+}
+
+function bbb_get_meeting_server_cache() {
+	$cache = cache::make_from_params( cache_store::MODE_APPLICATION, 'mod_bigbluebuttonbn',
+					  'meeting_server');
+	if(!$cache) throw new \Exception("Can't get cache mod_bigbluebuttonbn");
+	return $cache;
+}
+
+function bbb_set_meeting_server($meetingid,$server,$state=0) {
+	if(!$server) throw new \Exception("bbb_set_meeting_server server < 1");
+	$cache = bbb_get_meeting_server_cache();
+	if($state) {
+		error_log("bbb_set_meeting_server $server for $meetingid",0);
+		$cache->set($meetingid,$server);
+	} else {
+		error_log("bbb_del_meeting_server $server for $meetingid",0);
+		$cache->delete($meetingid);
+	}
+}
+
+function bbb_get_meeting_server($meetingid) {
+	global $DB;
+	$cache = bbb_get_meeting_server_cache();
+	$server = $cache->get($meetingid);
+	if($server !== false) {
+#		error_log("bbb_get_meeting_server CACHED server $server for $meetingid",0);
+		return $server;
+	}
+
+	$sql = "select id,server,timecreated from {bigbluebuttonbn_logs} where meetingid=? ";
+	$sql .= ' AND log = ? AND meta LIKE ? order by timecreated desc limit 1';
+	$server_list = $DB->get_records_sql($sql,
+		array($meetingid,BIGBLUEBUTTONBN_LOG_EVENT_CREATE,'%"record":true%'));
+
+	foreach($server_list as $s) {
+		$server = $s->server;
+		error_log("bbb_get_meeting_server DB server: $server for $meetingid",0);
+		$cache->set($meetingid,$server);
+		break;
+	}
+	if(!$server)
+		error_log("bbb_get_meeting_server NOTFOUND server for $meetingid",0);
+	return $server;
+}
+
 /**
  * Creates a bigbluebutton meeting and returns the response in an array.
  *
@@ -2401,19 +2558,19 @@ function bigbluebuttonbn_get_recordings($courseid = 0, $bigbluebuttonbnid = null
     $sql = 'SELECT DISTINCT on(meetingid, server) id, meetingid, server, bigbluebuttonbnid FROM {bigbluebuttonbn_logs} WHERE ';
     $sql .= '(bigbluebuttonbnid=' . implode(' OR bigbluebuttonbnid=', array_keys($bigbluebuttonbns)) . ')';
     // Include only Create events and exclude those with record not true.
-    $sql .= ' AND log = ? AND meta LIKE ? AND meta LIKE ?';
+    $sql .= ' AND log = ? AND meta LIKE ?';
     // Execute select for loading records based on existent bigbluebuttonbns.
 
-    $rinfo = $DB->get_records_sql($sql, array(BIGBLUEBUTTONBN_LOG_EVENT_CREATE, '%record%', '%true%'));
+    $rinfo = $DB->get_records_sql($sql, array(BIGBLUEBUTTONBN_LOG_EVENT_CREATE, '%"record":true%'));
     #error_log("bigbluebuttonbn_get_recordings list '$sql' ".print_r($rinfo,1),0);
     $ret = array();
     $sql = 'SELECT DISTINCT meetingid, bigbluebuttonbnid FROM {bigbluebuttonbn_logs} WHERE ';
     $sql .= ' server = ? and (bigbluebuttonbnid=' . implode(' OR bigbluebuttonbnid=', array_keys($bigbluebuttonbns)) . ')';
-    $sql .= ' AND log = ? AND meta LIKE ? AND meta LIKE ?';
+    $sql .= ' AND log = ? AND meta LIKE ?';
     // Execute select for loading records based on existent bigbluebuttonbns.
     foreach($rinfo as $id => $r) {
 		   
-	    $records = $DB->get_records_sql_menu($sql, array($r->server,BIGBLUEBUTTONBN_LOG_EVENT_CREATE, '%record%', '%true%'));
+	    $records = $DB->get_records_sql_menu($sql, array($r->server,BIGBLUEBUTTONBN_LOG_EVENT_CREATE, '%"record":true%'));
 	    # error_log("bigbluebuttonbn_get_recordings list server {$r->server} ".print_r($records,1),0);
 	    $rs = bigbluebuttonbn_get_recordings_array(array_keys($records), [], $r->server);
 	    if(count($rs) > 0)

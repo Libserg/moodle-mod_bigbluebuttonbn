@@ -47,7 +47,7 @@ class bigbluebutton {
      */
     public static function action_url($action = '', $data = array(), $metadata = array(),$server=false) {
 	if($server === false || intval($server) <= 0) {
-                error_log(date("Y-M-d H:m:s",time())." get '$setting' from\n".
+                error_log(date("Y-M-d H:m:s",time())." get '$action' from\n".
                         format_backtrace(debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT),1),0);
 		throw new \Exception("action_url");
 	}

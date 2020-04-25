@@ -12,11 +12,12 @@ try {
 } catch (Exception $e) {
 	#	echo 'Выброшено исключение: ',  $e->getMessage(), "\n";
 	$sql = "CREATE TABLE {bigbluebuttonbn_info} (".
-		" id SERIAL PRIMARY KEY,".
+		" id bigint PRIMARY KEY,".
 		" server smallint default 0,".
 		" meetingid varchar(128) not NULL,".
 		" meetinguid varchar(128) not NULL,".
 		" starttime bigint default 0,".
+		" users integer default 0,".
 		" total_len integer default 0,".
 		" voice_len integer default 0,".
 		" rtc_len integer default 0,".

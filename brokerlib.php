@@ -38,9 +38,23 @@ defined('MOODLE_INTERNAL') || die();
  */
 function bigbluebuttonbn_broker_meeting_info($bbbsession, $params, $updatecache) {
     $callbackresponse = array();
-    $info = bigbluebuttonbn_get_meeting_info($params['id'], $updatecache, $bbbsession['server']);
-    $callbackresponse['info'] = $info;
     $running = false;
+// FIXME server 0
+    if($bbbsession['server'] == 0) {
+	$server = bbb_select_server();
+	if(!$server) {
+	    $callbackresponse['info'] = array('running'=>'false');
+    	    $callbackresponse['status'] = array('can_join'=>0,'message'=>'No servers','can_end'=>false);
+	    error_log("bigbluebuttonbn_get_meeting_info ".print_r($callbackresponse,1),0);
+	    $callbackresponsedata = json_encode($callbackresponse);
+    	    return "{$params['callback']}({$callbackresponsedata});";
+	}
+	$bbbsession['server'] = $server;
+	#error_log("bigbluebuttonbn_broker_meeting_info select server $server",0);
+    }
+    $info = bigbluebuttonbn_get_meeting_info($params['id'], $updatecache, $bbbsession['server']);
+#    error_log("bigbluebuttonbn_get_meeting_info ".print_r($info,1),0);
+    $callbackresponse['info'] = $info;
     if ($info['returncode'] == 'SUCCESS') {
         $running = ($info['running'] === 'true');
     }
@@ -54,10 +68,13 @@ function bigbluebuttonbn_broker_meeting_info($bbbsession, $params, $updatecache)
         $participantcount = $info['participantCount'];
     }
     $canjoin = bigbluebuttonbn_broker_meeting_info_can_join($bbbsession, $running, $participantcount);
+#    error_log("bigbluebuttonbn_broker_meeting_info_can_join ".print_r($canjoin,1),0);
     $status["can_join"] = $canjoin["can_join"];
     $status["message"] = $canjoin["message"];
     $canend = bigbluebuttonbn_broker_meeting_info_can_end($bbbsession, $running);
+#    error_log("bigbluebuttonbn_broker_meeting_info_can_end  ".print_r($canend,1),0);
     $status["can_end"] = $canend["can_end"];
+#    error_log("bigbluebuttonbn_broker_meeting_info  ".print_r($status,1),0);
     $callbackresponse['status'] = $status;
     $callbackresponsedata = json_encode($callbackresponse);
     return "{$params['callback']}({$callbackresponsedata});";
@@ -242,8 +259,8 @@ function bigbluebuttonbn_broker_recording_play($params, $server = false) {
 	#error_log("bigbluebuttonbn_broker_recording_play server $server".print_r($params,1),3,"/tmp/bbb_broker.log");
 	$sql = "select bl.server from {bigbluebuttonbn_logs} as bl ";
 	$sql .= " inner join {bigbluebuttonbn} as b on b.id=bl.bigbluebuttonbnid where bl.meetingid = ? ";
-	$sql .= ' AND log = ? AND meta LIKE ? AND meta LIKE ?';
-	$rinfo = $DB->get_records_sql($sql, array($params['idx'],BIGBLUEBUTTONBN_LOG_EVENT_CREATE, '%record%', '%true%'));
+	$sql .= ' AND log = ? AND meta LIKE ?';
+	$rinfo = $DB->get_records_sql($sql, array($params['idx'],BIGBLUEBUTTONBN_LOG_EVENT_CREATE, '%"record":true%'));
 #	error_log("bigbluebuttonbn_broker_recording_play ".print_r($rinfo,1),3,"/tmp/bbb_broker.log");
 	foreach($rinfo as $r) {
 	    $recordings = bigbluebuttonbn_get_recordings_array($params['idx'], $params['id'], $r->server);

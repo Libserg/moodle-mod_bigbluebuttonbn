@@ -168,9 +168,9 @@ if(0) {
                 $errors['userlimit'] = 'We have a limit 120 users per room.';
             }
         }
-        if (!isset($data['server']) || !intval($data['server']) ) {
-                $errors['server'] = 'Server not selected.';
-        }
+#        if (!isset($data['server']) || !intval($data['server']) ) {
+#                $errors['server'] = 'Server not selected.';
+#        }
         return $errors;
     }
 
@@ -269,7 +269,6 @@ if(0) {
     private function bigbluebuttonbn_mform_add_block_server(&$mform, $modbbb) {
 	$bbbsrv = \mod_bigbluebuttonbn\locallib\config::select_server();
 	if($bbbsrv !== false) {
-	    $bbbsrv[0] = 'Not select';
             $mform->addElement('select', 'server', 'server',$bbbsrv);
 	    $mform->addHelpButton('server', 'server', 'bigbluebuttonbn');
 	    $mform->setType('server', PARAM_INT);

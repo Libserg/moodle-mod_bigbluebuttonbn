@@ -160,6 +160,8 @@ class config {
 	   isset($CFG->bigbluebuttonbn['server_name'])) {
 		$last_server = 1;
 		$servers[1] = $CFG->bigbluebuttonbn['server_name'];
+	} else {
+	   $servers[0] = 'Any';
 	}
 	return $last_server > 0 ? $servers : false;
     }

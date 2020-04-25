@@ -10,6 +10,7 @@ $strpar = array(
 	"id"=>"meetinguid",
 	"starttime"=>"starttime",
 	"total_time"=>"total_len",
+	"users"=>"users",
 	"voice_time"=>"voice_len",
 	"rtc_time"=>"rtc_len",
 	"tcdesk_time"=>"tcdesk_len",
@@ -20,7 +21,7 @@ $strpar = array(
 	"deskshare"=>"deskshare_size");
 
 function get_eid_info($eid) {
-	
+global $strpar;	
 $ret = array();
 
 $ch = curl_init();
@@ -41,8 +42,8 @@ curl_close($ch);
 foreach(explode("\n",$result) as $l) {
 	if(!strchr($l,":")) continue;
 	list($field, $data) = preg_split('/\s*:\s*/', $l);
-	if(!isset($strpar[$field])) continue;
-#	echo "$field : $data\n";
+	if(!array_key_exists($field,$strpar)) continue;
+#	echo "! '$field' {$strpar[$field]} : $data\n";
 	$ret[$strpar[$field]] = $data;
 }
 if(count($ret)) {
@@ -61,7 +62,9 @@ $recs = $DB->get_records_sql("select bl.meetingid as eid,timecreated from {bigbl
 # print_r($recs);
 $ctm = time();
 foreach(array_keys($recs) as $eid ) {
+	if(isset($argv[1]) && $eid != $argv[1]) continue;
 	$info = get_eid_info($eid);
+#	print_r($info);
 	if(count($info)) {
 		echo "ADD {$info['meetingid']}\n";
 		$DB->insert_record('bigbluebuttonbn_info',(object)$info,false,false);
@@ -78,7 +81,6 @@ foreach(array_keys($recs) as $eid ) {
 		} else {
 			echo "WAIT $eid\n";
 		}
-#		exit(1);
 	}
 }
 

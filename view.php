@@ -58,22 +58,26 @@ $bbbsession['bigbluebuttonbn'] = $bigbluebuttonbn;
 bigbluebuttonbn_view_bbbsession_set($PAGE->context, $bbbsession);
 
 // Validates if the BigBlueButton server is working.
-$serverversion = bigbluebuttonbn_get_server_version($bigbluebuttonbn->server);  // In locallib.
-if ($serverversion === null) {
-    $errmsg = 'view_error_unable_join_student';
-    $errurl = '/course/view.php';
-    $errurlparams = ['id' => $bigbluebuttonbn->course];
-    if ($bbbsession['administrator']) {
-        $errmsg = 'view_error_unable_join';
-        $errurl = '/admin/settings.php';
-        $errurlparams = ['section' => 'modsettingbigbluebuttonbn'];
-    } else if ($bbbsession['moderator']) {
-        $errmsg = 'view_error_unable_join_teacher';
-    }
-    print_error($errmsg, plugin::COMPONENT, new moodle_url($errurl, $errurlparams));
+// FIXME
+if($bigbluebuttonbn->server > 0) {
+  $serverversion = bigbluebuttonbn_get_server_version($bigbluebuttonbn->server);  // In locallib.
+  if ($serverversion === null) {
+      $errmsg = 'view_error_unable_join_student';
+      $errurl = '/course/view.php';
+      $errurlparams = ['id' => $bigbluebuttonbn->course];
+      if ($bbbsession['administrator']) {
+          $errmsg = 'view_error_unable_join';
+          $errurl = '/admin/settings.php';
+          $errurlparams = ['section' => 'modsettingbigbluebuttonbn'];
+      } else if ($bbbsession['moderator']) {
+          $errmsg = 'view_error_unable_join_teacher';
+      }
+      print_error($errmsg, plugin::COMPONENT, new moodle_url($errurl, $errurlparams));
+  }
+  $bbbsession['serverversion'] = (string) $serverversion;
+} else {
+  $bbbsession['serverversion'] = 2;
 }
-$bbbsession['serverversion'] = (string) $serverversion;
-
 // Mark viewed by user (if required).
 $completion = new completion_info($course);
 $completion->set_module_viewed($cm);

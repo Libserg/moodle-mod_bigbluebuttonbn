@@ -144,7 +144,17 @@ switch (strtolower($action)) {
         // Moodle event logger: Create an event for meeting left.
         bigbluebuttonbn_event_log(\mod_bigbluebuttonbn\event\events::$events['meeting_left'], $bigbluebuttonbn);
         // Update the cache.
-        $meetinginfo = bigbluebuttonbn_get_meeting_info($bbbsession['meetingid'], BIGBLUEBUTTONBN_UPDATE_CACHE,$bbbsession['server']);
+	if($bbbsession['server'] == 0) {
+		$server = bbb_get_meeting_server($bbbsession['meetingid']);
+		if($server) {
+			$bbbsession['server'] = $server;
+			bbb_set_meeting_server($bbbsession['meetingid'],$server,0);
+		}
+		else 
+			error_log("Logout BBB no server for {$bbbsession['meetingid']} ",0);
+	}
+	if($bbbsession['server'] > 0)
+             $meetinginfo = bigbluebuttonbn_get_meeting_info($bbbsession['meetingid'], BIGBLUEBUTTONBN_UPDATE_CACHE,$bbbsession['server']);
         // Check the origin page.
         $select = "userid = ? AND log = ?";
         $params = array(
@@ -176,6 +186,21 @@ switch (strtolower($action)) {
         } else if ($index) {
             $origin = BIGBLUEBUTTON_ORIGIN_INDEX;
         }
+
+	if($bbbsession['server'] == 0) {
+		$server = bbb_select_server();
+		if($server === false) {
+			print_error('general_error_unable_connect', 'bigbluebuttonbn',
+				$CFG->wwwroot.'/admin/settings.php?section=modsettingbigbluebuttonbn');
+			break;
+		}
+		$bbbsession['server'] = $server;
+		$bigbluebuttonbn->server = $server;
+		$bbbsession['bigbluebuttonbn']->server = $server;
+		$server = bbb_get_meeting_server($bbbsession['meetingid']);
+		if($server > 0 && $server != $bbbsession['server'])
+			error_log("Join BBB server reselected to {$bigbluebuttonbn->server}",0);
+	}
         // See if the session is in progress.
         if (bigbluebuttonbn_is_meeting_running($bbbsession['meetingid'],false,$bbbsession['server'])) {
             // Since the meeting is already running, we just join the session.
@@ -224,6 +249,7 @@ switch (strtolower($action)) {
             print_error(get_string('index_error_forciblyended', 'bigbluebuttonbn'));
             break;
         }
+        bbb_set_meeting_server($bbbsession['meetingid'],$bbbsession['server'],1);
         // Moodle event logger: Create an event for meeting created.
         bigbluebuttonbn_event_log(\mod_bigbluebuttonbn\event\events::$events['meeting_create'], $bigbluebuttonbn);
         // Internal logger: Insert a record with the meeting created.
