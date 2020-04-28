@@ -1,9 +1,33 @@
 [![Build Status](https://travis-ci.org/blindsidenetworks/moodle-mod_bigbluebuttonbn.svg?branch=master)](https://travis-ci.org/blindsidenetworks/moodle-mod_bigbluebuttonbn)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/blindsidenetworks/moodle-mod_bigbluebuttonbn/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/blindsidenetworks/moodle-mod_bigbluebuttonbn/?branch=master)
 
+
 BigBlueButtonBN Activity Module for Moodle
 ==========================================
 BigBlueButton is an open source web conferencing system that enables universities and colleges to deliver a high-quality learning experience to remote students.
+
+# This modification is designed to work with several BBB-servers.
+
+The list of BBB servers is specified through the main configuration file.
+
+'server_url' must be identical to 'server_url1'.
+
+'shared_secret' must be identical to 'shared_secret1'.
+
+```
+$CFG->bigbluebuttonbn['server_url'] = 'https://bbb2.example.org/bigbluebutton/';
+$CFG->bigbluebuttonbn['shared_secret'] = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+
+$CFG->bigbluebuttonbn['server_url1'] = 'https://bbb1.example.org/bigbluebutton/';
+$CFG->bigbluebuttonbn['shared_secret1'] = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+$CFG->bigbluebuttonbn['server_name1'] = 'Main server';
+
+$CFG->bigbluebuttonbn['server_url2'] = 'https://bbb2.example.org/bigbluebutton/';
+$CFG->bigbluebuttonbn['shared_secret2'] = 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy';
+$CFG->bigbluebuttonbn['server_name2'] = 'Secondary server';
+```
+
+
 
 These instructions describe how to install the BigBlueButtonBN Activity Module for Moodle.  This module is developed and supported by Blindside Networks, the company that started the BigBlueButton project in 2007.
 
