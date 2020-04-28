@@ -97,7 +97,7 @@ function bigbluebuttonbn_view_message_box(&$bbbsession, $message, $type = 'warni
  * @return void
  */
 function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
-    global $OUTPUT, $PAGE;
+    global $OUTPUT, $PAGE, $USER;
     $type = null;
     if (isset($bbbsession['bigbluebuttonbn']->type)) {
         $type = $bbbsession['bigbluebuttonbn']->type;
@@ -122,11 +122,63 @@ function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
     $output .= $OUTPUT->heading($desc, 5);
 
     $output .= '<p>Запись:'.array('возможна','отключена','включена')[$type].'</p>';
+    $bbb_rc = bbb_server_restrict();
+    $restricted = false;
+    if(is_array($bbb_rc)) {
+	$srv = intval($bbbsession['server']);
+	if($srv > 0) {
+	    if(!isset($bbb_rc[$srv])) {
+		$restricted = 'selected server not configured';
+	    } else {
+		if($bbb_rc[$srv]['denybbbserver']) {
+		    $restricted = 'selected server not allowed';
+		}
+		# FIXME check connection limit
+	    }
+	} else {
+	    $srv_cnt = 0;
+	    $output .= '<p>Server loading ratio: ';
+	    foreach($bbb_rc as $k=>$v) {
+    		if(!$k) continue;
+		if($v['denybbbserver']) continue; 
+		if($v['autobbbserver']) continue; 
+    	    	$info = bbb_get_server_info($k);
+		$srv_cnt++;
+		if($info[0]) {
+		    $ratio = intval($info['RC']) * $v['multbbbserver'] / 100 + $v['costbbbserver'];
+		    $output .= ' '.$v[2].':'.$ratio;
+		}
+	    }
+	    $output .= '</p>';
+	    if(!$srv_cnt)
+		 $restricted = 'No servers available';
+	}
+    }
+    $rserver = $bbbsession['server'];
+    if(!$rserver)
+	    $rserver = bbb_get_meeting_server($bbbsession['meetingid']);
+    if($rserver) {
+	$oserver = $bbbsession['server'];
+	$bbbsession['server'] = $rserver;
+	$ucount = bigbluebuttonbn_get_userid_connect($bbbsession);
+	$bbbsession['server'] = $oserver;
+	$s_info = bbb_get_server_info($rserver);
+	if (isset($bbb_rc[$rserver]['connlimitserver']) &&
+	    $s_info['LC'] > $bbb_rc[$rserver]['connlimitserver'] )
+	        $restricted = 'Too may connection on server';
+    }
 
-    if ($enabledfeatures['showroom']) {
-        $output .= bigbluebuttonbn_view_render_room($bbbsession, $activity, $jsvars);
-        $PAGE->requires->yui_module('moodle-mod_bigbluebuttonbn-rooms',
-            'M.mod_bigbluebuttonbn.rooms.init', array($jsvars));
+    if($ucount > 1 && !$restricted) 
+        $restricted = 'user login limit';
+
+    if ($restricted) {
+	$output .= '<h3>'.$restricted.'</h3>';
+    } else {
+        if($enabledfeatures['showroom']) {
+            $output .= bigbluebuttonbn_view_render_room($bbbsession, $activity, $jsvars);
+            $PAGE->requires->yui_module('moodle-mod_bigbluebuttonbn-rooms',
+		    'M.mod_bigbluebuttonbn.rooms.init', array($jsvars));
+	}
     }
     if ($enabledfeatures['showrecordings']) {
         $output .= html_writer::start_tag('div', array('id' => 'bigbluebuttonbn_view_recordings'));

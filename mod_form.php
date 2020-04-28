@@ -346,6 +346,14 @@ if(0) {
         }
         $this->bigbluebuttonbn_mform_add_element($mform, $field['type'], $field['name'], $field['data_type'],
             $field['description_key'], $cfg['userlimit_default']);
+        $field = ['type' => 'hidden', 'name' => 'uidlimit', 'data_type' => PARAM_INT, 'description_key' => null];
+        if ($cfg['uidlimit_editable']) {
+            $field['type'] = 'text';
+            $field['data_type'] = PARAM_TEXT;
+            $field['description_key'] = 'mod_form_field_uidlimit';
+        }
+        $this->bigbluebuttonbn_mform_add_element($mform, $field['type'], $field['name'], $field['data_type'],
+            $field['description_key'], $cfg['uidlimit_default']);
         $field = ['type' => 'hidden', 'name' => 'record', 'data_type' => PARAM_INT, 'description_key' => null];
         if ($cfg['recording_editable']) {
             $field['type'] = 'checkbox';
@@ -449,7 +457,8 @@ if(0) {
      */
     private function bigbluebuttonbn_mform_add_block_room(&$mform, $cfg) {
         if ($cfg['voicebridge_editable'] || $cfg['waitformoderator_editable'] ||
-            $cfg['userlimit_editable'] || $cfg['recording_editable']) {
+	    $cfg['userlimit_editable'] || $cfg['uidlimit_editable'] ||
+	    $cfg['recording_editable']) {
             $mform->addElement('header', 'room', get_string('mod_form_block_room', 'bigbluebuttonbn'));
             $this->bigbluebuttonbn_mform_add_block_room_room($mform, $cfg);
         }

@@ -92,14 +92,18 @@ try {
         echo $meetinginfo;
         return;
     }
-    if ($a == 'meeting_end') {
-	if(!$bbbsession['server']) {
-	    $rserver = bbb_get_meeting_server($bbbsession['meetingid']);
-	    if($rserver > 0)
+    if(!$bbbsession['server'] && $rserver < 1) {
+	$rserver = bbb_get_meeting_server($bbbsession['meetingid']);
+	if($rserver > 0)
 		$bbbsession['server'] = $rserver;
-	    else
-		error_log("meeting_end ERROR SERVER",0);
-	}
+    }
+    if(!$bbbsession['server'] && $rserver > 0)
+	    $bbbsession['server'] = $rserver;
+    if($bbbsession['server'] && $rserver < 1)
+	    $rserver = $bbbsession['server'];
+    if(!$bbbsession['server'])
+		error_log("ERROR no server for {$bbbsession['meetingid']}",0);
+    if ($a == 'meeting_end') {
         $meetingend = bigbluebuttonbn_broker_meeting_end($bbbsession, $params);
         echo $meetingend;
         return;

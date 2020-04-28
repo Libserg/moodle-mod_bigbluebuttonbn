@@ -228,16 +228,22 @@ function bbb_get_server_info($n) {
 }
 
 function bbb_select_server() {
-	$server_list = \mod_bigbluebuttonbn\locallib\config::server_list();
+	$server_list = bbb_server_restrict();
 	$load = [];
 	$min_rc = false;
 	$s_rc = false;
 	foreach($server_list as $k=>$s) {
+		if(!$k) continue;
+		if(isset($s['denybbbserver']) && $s['denybbbserver'])
+			continue;
+		if(isset($s['autobbbserver']) && $s['autobbbserver'])
+			continue;
 		$load[$k] = bbb_get_server_info($k,$s);
 		if(!$load[$k][0]) continue;
-		if($s_rc === false || $load[$k]['RC'] < $min_rc) {
+		$ratio = $load[$k]['RC'] * $s['multbbbserver'] / 100 + $s['costbbbserver'];
+		if($s_rc === false || $ratio < $min_rc) {
 			$s_rc = $k;
-			$min_rc = $load[$k]['RC'];
+			$min_rc = $ratio;
 		}
 	}
 	return $s_rc;
@@ -1401,7 +1407,17 @@ function bigbluebuttonbn_get_meeting_info($meetingid, $updatecache = false, $ser
     $cache->set($meetingid, array('creation_time' => time(), 'meeting_info' => json_encode($meetinginfo)));
     return $meetinginfo;
 }
-
+function bigbluebuttonbn_get_userid_connect(&$bbbsession) {
+global $USER;
+    $minfo = bigbluebuttonbn_get_meeting_info($bbbsession['meetingid'], true, $bbbsession['server']);
+    $ucount = 0;
+    if(isset($minfo['attendees'])) {
+	foreach($minfo['attendees']->attendee as $u) {
+	    if($u->userID == $USER->id && $u->role != 'MODERATOR') $ucount++;
+	} 
+    }
+    return $ucount;
+}
 /**
  * Perform isMeetingRunning on BBB.
  *
@@ -3099,6 +3115,21 @@ function bigbluebuttonbn_settings_userlimit(&$renderer) {
     }
 }
 
+function bigbluebuttonbn_settings_uidlimit(&$renderer) {
+    // Configuration for "user limit" feature.
+    if ((boolean) \mod_bigbluebuttonbn\settings\validator::section_user_limit_shown()) {
+        $renderer->render_group_header('uidlimit');
+        $renderer->render_group_element(
+            'uidlimit_default',
+            $renderer->render_group_element_text('uidlimit_default', 0, PARAM_INT)
+        );
+        $renderer->render_group_element(
+            'uidlimit_editable',
+            $renderer->render_group_element_checkbox('uidlimit_editable', 0)
+        );
+    }
+}
+
 /**
  * Helper function renders duration settings if the feature is enabled.
  *
@@ -3518,6 +3549,10 @@ function bigbluebuttonbn_view_bbbsession_set($context, &$bbbsession) {
     if ((boolean) \mod_bigbluebuttonbn\locallib\config::get('userlimit_editable')) {
         $bbbsession['userlimit'] = intval($bbbsession['bigbluebuttonbn']->userlimit);
     }
+    $bbbsession['uidlimit'] = intval((int) \mod_bigbluebuttonbn\locallib\config::get('uidlimit_default'));
+    if ((boolean) \mod_bigbluebuttonbn\locallib\config::get('uidlimit_editable')) {
+        $bbbsession['uidlimit'] = intval($bbbsession['bigbluebuttonbn']->uidlimit);
+    }
     $bbbsession['voicebridge'] = $bbbsession['bigbluebuttonbn']->voicebridge;
     if ($bbbsession['bigbluebuttonbn']->voicebridge > 0) {
         $bbbsession['voicebridge'] = 70000 + $bbbsession['bigbluebuttonbn']->voicebridge;
@@ -3682,6 +3717,44 @@ function bigbluebuttonbn_create_meeting_metadata(&$bbbsession) {
     return $metadata;
 }
 
+function bbb_server_restrict() {
+    global $DB,$CFG;
+    if(isset($CFG->bbb_server_rc)) return $CFG->bbb_server_rc;
+    $rc = $DB->get_records('config_plugins',array('plugin'=>'local_bbbadm'),'name','name,value');
+    if(!$rc) return false;
+    $slist = \mod_bigbluebuttonbn\locallib\config::server_list();
+    foreach($rc as $k=>$v) {
+	if(strchr($k,'_')) {
+	    $kv = explode('_',$k);
+	    if(count($kv) != 2) continue;
+	    $srv = intval($kv[1]);
+	    if(!$srv) continue;
+	    if(!isset($slist[$srv])) continue;
+	    $slist[$srv][$kv[0]] = $v->value;
+	} else {
+	    if($k == 'stopbbb') $slist[0]['stop'] = intval($v->value);
+	    if($k == 'denybbbtxt') $slist[0]['stopmsg'] = $v->value;
+	}
+    }
+    foreach($slist as $srv => $v) {
+	if(!$srv) continue;
+	if(!isset($v['denybbbserver']))
+	    $v['denybbbserver'] = 0;
+	if(!isset($v['autobbbserver']))
+	    $v['autobbbserver'] = 0;
+	if(!isset($v['costbbbserver']))
+	    $v['costbbbserver'] = 0;
+	if(!isset($v['multbbbserver']) || !$v['multbbbserver'])
+	    $v['multbbbserver'] = 100;
+	if(!isset($v['connlimitserver']) || !$v['connlimitserver'])
+	    $v['connlimitserver'] = 200;
+    }
+    if(!isset($slist[0]['stop'])) $slist[0]['stop'] = 0;
+    if(!isset($slist[0]['stopmsg'])) $slist[0]['stopmsg'] = '';
+    $CFG->bbb_server_rc = $slist;
+    return $slist;
+}
+
 function bigbluebuttonbn_check_stop($id,$stop = false) {
 global $CFG,$OUTPUT;
 if(file_exists($CFG->dataroot . '/bbbctl/stop')) {
@@ -3689,6 +3762,18 @@ if(file_exists($CFG->dataroot . '/bbbctl/stop')) {
     echo $OUTPUT->header();
     echo $OUTPUT->box_start('block').'<h2>';
     echo $OUTPUT->box(get_string('view_stop_join','bigbluebuttonbn',$stop_msg));
+    echo '</h2>'.$OUTPUT->box_end();
+    // Output finishes.
+    echo $OUTPUT->footer();
+    if($stop) exit;
+    return 1;
+}
+$rc = bbb_server_restrict();
+#pre_print_r($rc);
+if(isset($rc[0]['stop']) && $rc[0]['stop']) {
+    echo $OUTPUT->header();
+    echo $OUTPUT->box_start('block').'<h2>';
+    echo $OUTPUT->box(get_string('view_stop_join','bigbluebuttonbn',$rc[0]['stopmsg'] ?: ''));
     echo '</h2>'.$OUTPUT->box_end();
     // Output finishes.
     echo $OUTPUT->footer();

@@ -522,6 +522,7 @@ function bigbluebuttonbn_reset_recordings($courseid) {
     $bsrv = \mod_bigbluebuttonbn\locallib\config::server_list();
     if(!$bsrv) return;
     foreach($bsrv as $server => $sinfo) {
+	if(!$server) continue;
 	$recordings = bigbluebuttonbn_get_recordings($courseid, null, false, true, $server);
 	// Remove all the recordings.
 	if(count($recordings) > 0) {

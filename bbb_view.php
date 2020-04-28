@@ -26,7 +26,7 @@
 require_once(dirname(dirname(dirname(__FILE__))).'/config.php');
 require_once(dirname(__FILE__).'/locallib.php');
 
-global $SESSION;
+global $SESSION, $USER;
 
 $action = required_param('action', PARAM_TEXT);
 $id = optional_param('id', 0, PARAM_INT);
@@ -200,13 +200,36 @@ switch (strtolower($action)) {
 		$server = bbb_get_meeting_server($bbbsession['meetingid']);
 		if($server > 0 && $server != $bbbsession['server'])
 			error_log("Join BBB server reselected to {$bigbluebuttonbn->server}",0);
+	} else $server = $bbbsession['server'];
+
+	$r_info = bbb_server_restrict();
+	$s_info = bbb_get_server_info($server);
+	if(!$s_info) {
+            header('Location: '.$bbbsession['logoutURL']);
+	    break;
 	}
+	if( isset($r_info[$server]['connlimitserver']) &&
+	    $s_info['LC'] > $r_info[$server]['connlimitserver'] ) {
+
+            header('Location: '.$bbbsession['logoutURL']);
+	    break;
+	}
+	
         // See if the session is in progress.
-        if (bigbluebuttonbn_is_meeting_running($bbbsession['meetingid'],false,$bbbsession['server'])) {
+        if (bigbluebuttonbn_is_meeting_running($bbbsession['meetingid'],false,$server)) {
             // Since the meeting is already running, we just join the session.
-            bigbluebuttonbn_bbb_view_join_meeting($bbbsession, $bigbluebuttonbn, $origin);
+	    # FIXME check connected users
+	    #
+	    $ucount = bigbluebuttonbn_get_userid_connect($bbbsession);
+	    if($ucount > 1) {
+            	header('Location: '.$bbbsession['logoutURL']);
+		break;
+	    }
+	    bigbluebuttonbn_bbb_view_join_meeting($bbbsession, $bigbluebuttonbn, $origin);
             break;
         }
+	# FIXME check connections on server
+		
         // If user is not administrator nor moderator (user is steudent) and waiting is required.
         if (!$bbbsession['administrator'] && !$bbbsession['moderator'] && $bbbsession['wait']) {
             header('Location: '.$bbbsession['logoutURL']);
@@ -217,7 +240,7 @@ switch (strtolower($action)) {
             bigbluebuttonbn_bbb_view_create_meeting_data($bbbsession),
             bigbluebuttonbn_bbb_view_create_meeting_metadata($bbbsession),
             $bbbsession['presentation']['name'],
-            $bbbsession['presentation']['url'],$bbbsession['server']
+            $bbbsession['presentation']['url'],$server
         );
         if (empty($response)) {
             // The server is unreachable.
@@ -249,7 +272,7 @@ switch (strtolower($action)) {
             print_error(get_string('index_error_forciblyended', 'bigbluebuttonbn'));
             break;
         }
-        bbb_set_meeting_server($bbbsession['meetingid'],$bbbsession['server'],1);
+        bbb_set_meeting_server($bbbsession['meetingid'],$server,1);
         // Moodle event logger: Create an event for meeting created.
         bigbluebuttonbn_event_log(\mod_bigbluebuttonbn\event\events::$events['meeting_create'], $bigbluebuttonbn);
         // Internal logger: Insert a record with the meeting created.
