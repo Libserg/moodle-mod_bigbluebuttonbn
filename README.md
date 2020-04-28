@@ -6,12 +6,20 @@ BigBlueButtonBN Activity Module for Moodle
 ==========================================
 BigBlueButton is an open source web conferencing system that enables universities and colleges to deliver a high-quality learning experience to remote students.
 
-# This modification is designed to work with several BBB-servers.
+## This modification is designed to work with several BBB-servers.
+
+## Work in progress!
+
+For each meeting, you can explicitly select a server or set automatic selection. With automatic selection, before you create a meeting, each time you search for the least loaded server. To set up automatic selection criteria, you need to install the optional local_bbbadm plugin ( https://github.com/vel21ripn/bbbadm ).
 
 The list of BBB servers is specified through the main configuration file.
 
-'server_url' must be identical to 'server_url1'.
+Each server must have three parameters defined:
+* server_url
+* shared_secret
+* server name
 
+'server_url' must be identical to 'server_url1',
 'shared_secret' must be identical to 'shared_secret1'.
 
 ```
@@ -26,8 +34,7 @@ $CFG->bigbluebuttonbn['server_url2'] = 'https://bbb2.example.org/bigbluebutton/'
 $CFG->bigbluebuttonbn['shared_secret2'] = 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy';
 $CFG->bigbluebuttonbn['server_name2'] = 'Secondary server';
 ```
-
-
+#
 
 These instructions describe how to install the BigBlueButtonBN Activity Module for Moodle.  This module is developed and supported by Blindside Networks, the company that started the BigBlueButton project in 2007.
 
