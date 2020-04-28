@@ -6,6 +6,7 @@
 /moodle-plugin-ci/
 /output*
 /node_modules/
+/db/rec_info
 
 /vendor/*
 !/vendor/firebase/
