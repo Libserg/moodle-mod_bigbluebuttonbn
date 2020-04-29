@@ -37,7 +37,6 @@ $params['bigbluebuttonbn'] = optional_param('bigbluebuttonbn', 0, PARAM_INT);
 $params['signed_parameters'] = optional_param('signed_parameters', '', PARAM_TEXT);
 $params['updatecache'] = optional_param('updatecache', 'false', PARAM_TEXT);
 $params['meta'] = optional_param('meta', '', PARAM_TEXT);
-$rserver = optional_param('server', -1, PARAM_INT);
 
 require_login(null, true);
 require_sesskey();
@@ -99,15 +98,11 @@ try {
         return;
     }
     // search "server" for meetingid
-    if(!$bbbsession['server'] && $rserver < 1) {
+    if(!$bbbsession['server']) {
 	$rserver = bbb_get_meeting_server($bbbsession['meetingid']);
 	if($rserver > 0)
-		$bbbsession['server'] = $rserver;
+	    $bbbsession['server'] = $rserver;
     }
-    if(!$bbbsession['server'] && $rserver > 0)
-	$bbbsession['server'] = $rserver;
-    if ($bbbsession['server'] && $rserver < 1)
-	$rserver = $bbbsession['server'];
     if(!$bbbsession['server'])
 	    error_log("ERROR no server for {$bbbsession['meetingid']}",0);
 
