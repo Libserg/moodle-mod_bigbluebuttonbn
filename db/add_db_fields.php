@@ -55,13 +55,29 @@ try {
 	    echo "bigbluebuttonbn_logs norecinfo success added!\n";
 	}
 }
+try {
+	$sql = "create index {bigbluebuttonbn_logs}_log_hash on {bigbluebuttonbn_logs} USING hash(log)";
+        if ($DB->execute($sql))
+	    echo "bigbluebuttonbn_logs index log OK!\n";
+} catch (Exception $e) {
+	if(strstr($e->error,'already exists') !== false)
+	    echo "bigbluebuttonbn_logs index already exists!\n";
+	  else 
+	    echo $e->getMessage(), ':', $e->error , "\n";
+}
+try {
+	$sql = "create index {bigbluebuttonbn_logs}_meetingid_idx on {bigbluebuttonbn_logs} USING btree(meetingid)";
+        if ($DB->execute($sql))
+	    echo "bigbluebuttonbn_logs index meetingid OK!\n";
+} catch (Exception $e) {
+	if(strstr($e->error,'already exists') !== false)
+	    echo "bigbluebuttonbn_logs index meetingid already exists!\n";
+	  else 
+	    echo $e->getMessage(), ':', $e->error , "\n";
+}
 
 try {
-    if($DB->execute("select server from {bigbluebuttonbn_info} where server is not NULL"))
-	echo "bigbluebuttonbn_info already upgraded!\n";
-} catch (Exception $e) {
-	#	echo 'Выброшено исключение: ',  $e->getMessage(), "\n";
-	$sql = "CREATE TABLE {bigbluebuttonbn_info} (".
+	$sql = "CREATE TABLE IF NOT EXISTS {bigbluebuttonbn_info} (".
 		" id bigint PRIMARY KEY,".
 		" server smallint default 0,".
 		" meetingid varchar(128) not NULL,".
@@ -77,9 +93,11 @@ try {
 		" audio_size integer default 0,".
 		" video_size integer default 0,".
 		" deskshare_size integer default 0)";
-	if( $DB->execute($sql)) {
-	    echo "bigbluebuttonbn_info success upgraded!\n";
-	}
+	
+	if ($DB->execute($sql))
+	    echo "bigbluebuttonbn_info OK!\n";
+} catch (Exception $e) {
+	echo 'Выброшено исключение: ',  $e->getMessage(), "\n";
 }
 
 exit(0); // 0 means success.

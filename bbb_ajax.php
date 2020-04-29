@@ -87,30 +87,33 @@ $enabledfeatures = bigbluebuttonbn_get_enabled_features($typeprofiles, $type);
 try {
     header('Content-Type: application/javascript; charset=utf-8');
     $a = strtolower($params['action']);
+    // meeting_info and recording_play not needed "server"
     if ($a == 'meeting_info') {
         $meetinginfo = bigbluebuttonbn_broker_meeting_info($bbbsession, $params, ($params['updatecache'] == 'true'));
         echo $meetinginfo;
         return;
     }
+    if ($a == 'recording_play') {
+        $recordingplay = bigbluebuttonbn_broker_recording_play($params);
+        echo $recordingplay;
+        return;
+    }
+    // search "server" for meetingid
     if(!$bbbsession['server'] && $rserver < 1) {
 	$rserver = bbb_get_meeting_server($bbbsession['meetingid']);
 	if($rserver > 0)
 		$bbbsession['server'] = $rserver;
     }
     if(!$bbbsession['server'] && $rserver > 0)
-	    $bbbsession['server'] = $rserver;
-    if($bbbsession['server'] && $rserver < 1)
-	    $rserver = $bbbsession['server'];
+	$bbbsession['server'] = $rserver;
+    if ($bbbsession['server'] && $rserver < 1)
+	$rserver = $bbbsession['server'];
     if(!$bbbsession['server'])
-		error_log("ERROR no server for {$bbbsession['meetingid']}",0);
+	    error_log("ERROR no server for {$bbbsession['meetingid']}",0);
+
     if ($a == 'meeting_end') {
         $meetingend = bigbluebuttonbn_broker_meeting_end($bbbsession, $params);
         echo $meetingend;
-        return;
-    }
-    if ($a == 'recording_play') {
-        $recordingplay = bigbluebuttonbn_broker_recording_play($params,$rserver < 0 ? false : $rserver);
-        echo $recordingplay;
         return;
     }
     if ($a == 'recording_links') {

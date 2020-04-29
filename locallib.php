@@ -273,8 +273,8 @@ function bbb_get_meeting_server($meetingid) {
 	$cache = bbb_get_meeting_server_cache();
 	$server = $cache->get($meetingid);
 	if($server !== false) {
-#		error_log("bbb_get_meeting_server CACHED server $server for $meetingid",0);
-		return $server;
+		if($server[0] > time() - 10)
+			return $server[1];
 	}
 
 	$sql = "select id,server,timecreated from {bigbluebuttonbn_logs} where meetingid=? ";
@@ -284,8 +284,8 @@ function bbb_get_meeting_server($meetingid) {
 
 	foreach($server_list as $s) {
 		$server = $s->server;
-		error_log("bbb_get_meeting_server DB server: $server for $meetingid",0);
-		$cache->set($meetingid,$server);
+		#error_log("bbb_get_meeting_server DB server: $server for $meetingid",0);
+		$cache->set($meetingid,[time(),$server]);
 		break;
 	}
 	if(!$server)
@@ -435,7 +435,7 @@ function bigbluebuttonbn_get_recordings_array_fetch($meetingidsarray, $server) {
 function bigbluebuttonbn_get_recordings_array_fetch_page($mids, $server) {
     $recordings = array();
 
-    if($server === false)
+    if($server === false || !$server)
 	    throw new \Exception('bigbluebuttonbn_get_recordings_array_fetch_page server missing');
     // Do getRecordings is executed using a method GET (supported by all versions of BBB).
     $url = \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('getRecordings', ['meetingID' => implode(',', $mids)],
@@ -1861,7 +1861,7 @@ function bigbluebuttonbn_get_recording_data_row_type($recording, $bbbsession, $p
     }
     $text = bigbluebuttonbn_get_recording_type_text($playback['type']);
     $href = $CFG->wwwroot . '/mod/bigbluebuttonbn/bbb_view.php?action=play&bn=' . $bbbsession['bigbluebuttonbn']->id .
-        '&mid=' . $recording['meetingID'] . '&rid=' . $recording['recordID'] . '&rtype=' . $playback['type'];#.'&server='.$recording['server'];
+        '&mid=' . $recording['meetingID'] . '&rid=' . $recording['recordID'] . '&rtype=' . $playback['type'];
     if (!isset($recording['imported']) || !isset($recording['protected']) || $recording['protected'] === 'false') {
         $href .= '&href=' . urlencode(trim($playback['url']));
     }
@@ -1870,7 +1870,6 @@ function bigbluebuttonbn_get_recording_data_row_type($recording, $bbbsession, $p
         'class' => 'btn btn-sm btn-default',
         'onclick' => 'M.mod_bigbluebuttonbn.recordings.recordingPlay(this);',
         'data-action' => 'play',
-        'data-server' => $recording['server'],
         'data-target' => $playback['type'],
         'data-href' => $href,
       );
@@ -3510,8 +3509,8 @@ function bigbluebuttonbn_instance_ownerid($bigbluebuttonbn) {
  *
  * @return boolean
  */
-function bigbluebuttonbn_has_html5_client() {
-    $checkurl = \mod_bigbluebuttonbn\locallib\bigbluebutton::root() . "html5client/check";
+function bigbluebuttonbn_has_html5_client($server=false) {
+    $checkurl = \mod_bigbluebuttonbn\locallib\bigbluebutton::root($server) . "html5client/check";
     $curlinfo = bigbluebuttonbn_wrap_xml_load_file_curl_request($checkurl, 'HEAD');
     return (isset($curlinfo['http_code']) && $curlinfo['http_code'] == 200);
 }
@@ -3719,7 +3718,7 @@ function bigbluebuttonbn_create_meeting_metadata(&$bbbsession) {
 
 function bbb_server_restrict() {
     global $DB,$CFG;
-    if(isset($CFG->bbb_server_rc)) return $CFG->bbb_server_rc;
+#    if(isset($CFG->bbb_server_rc)) return $CFG->bbb_server_rc;
     $rc = $DB->get_records('config_plugins',array('plugin'=>'local_bbbadm'),'name','name,value');
     if(!$rc) return false;
     $slist = \mod_bigbluebuttonbn\locallib\config::server_list();
@@ -3739,15 +3738,15 @@ function bbb_server_restrict() {
     foreach($slist as $srv => $v) {
 	if(!$srv) continue;
 	if(!isset($v['denybbbserver']))
-	    $v['denybbbserver'] = 0;
+	    $slist[$srv]['denybbbserver'] = 0;
 	if(!isset($v['autobbbserver']))
-	    $v['autobbbserver'] = 0;
-	if(!isset($v['costbbbserver']))
-	    $v['costbbbserver'] = 0;
-	if(!isset($v['multbbbserver']) || !$v['multbbbserver'])
-	    $v['multbbbserver'] = 100;
-	if(!isset($v['connlimitserver']) || !$v['connlimitserver'])
-	    $v['connlimitserver'] = 200;
+	    $slist[$srv]['autobbbserver'] = 0;
+	if(!isset($v['costbbbserver']) || $v['costbbbserver'] === '' )
+	    $slist[$srv]['costbbbserver'] = 0;
+	if(!isset($v['multbbbserver']) || $v['multbbbserver'] === '' || !$v['multbbbserver'])
+	    $slist[$srv]['multbbbserver'] = 100;
+	if(!isset($v['connlimitserver']) || $v['connlimitserver'] === '' || !$v['connlimitserver'])
+	    $slist[$srv]['connlimitserver'] = 200;
     }
     if(!isset($slist[0]['stop'])) $slist[0]['stop'] = 0;
     if(!isset($slist[0]['stopmsg'])) $slist[0]['stopmsg'] = '';

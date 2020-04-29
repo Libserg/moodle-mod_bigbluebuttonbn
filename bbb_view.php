@@ -39,7 +39,6 @@ $errors = optional_param('errors', '', PARAM_TEXT);
 $timeline = optional_param('timeline', 0, PARAM_INT);
 $index = optional_param('index', 0, PARAM_INT);
 $group = optional_param('group', -1, PARAM_INT);
-$rserver = optional_param('server', -1, PARAM_INT);
 
 $bbbviewinstance = bigbluebuttonbn_view_validator($id, $bn);
 if (!$bbbviewinstance) {
@@ -188,48 +187,44 @@ switch (strtolower($action)) {
         }
 
 	if($bbbsession['server'] == 0) {
-		$server = bbb_select_server();
-		if($server === false) {
-			print_error('general_error_unable_connect', 'bigbluebuttonbn',
-				$CFG->wwwroot.'/admin/settings.php?section=modsettingbigbluebuttonbn');
-			break;
-		}
-		$bbbsession['server'] = $server;
-		$bigbluebuttonbn->server = $server;
-		$bbbsession['bigbluebuttonbn']->server = $server;
-		$server = bbb_get_meeting_server($bbbsession['meetingid']);
-		if($server > 0 && $server != $bbbsession['server'])
-			error_log("Join BBB server reselected to {$bigbluebuttonbn->server}",0);
-	} else $server = $bbbsession['server'];
+	    $server = bbb_select_server();
+	    if($server === false) {
+		print_error('general_error_unable_connect', 'bigbluebuttonbn',
+			$CFG->wwwroot.'/admin/settings.php?section=modsettingbigbluebuttonbn');
+		break;
+	    }
+	    $bbbsession['server'] = $server;
+	    $bigbluebuttonbn->server = $server;
+	    $bbbsession['bigbluebuttonbn']->server = $server;
+	} else
+	    $server = $bbbsession['server'];
 
+	// Limit check should be the same with viewlib.php !!!
 	$r_info = bbb_server_restrict();
-	$s_info = bbb_get_server_info($server);
+	$s_info = bbb_get_server_info($server); 
 	if(!$s_info) {
             header('Location: '.$bbbsession['logoutURL']);
 	    break;
 	}
 	if( isset($r_info[$server]['connlimitserver']) &&
-	    $s_info['LC'] > $r_info[$server]['connlimitserver'] ) {
+	    $s_info['LC'] >= $r_info[$server]['connlimitserver'] ) {
 
             header('Location: '.$bbbsession['logoutURL']);
 	    break;
 	}
-	
         // See if the session is in progress.
         if (bigbluebuttonbn_is_meeting_running($bbbsession['meetingid'],false,$server)) {
             // Since the meeting is already running, we just join the session.
-	    # FIXME check connected users
 	    #
 	    $ucount = bigbluebuttonbn_get_userid_connect($bbbsession);
-	    if($ucount > 1) {
+	    if(isset($bbbsession['uidlimit']) && $ucount >= $bbbsession['uidlimit']) {
             	header('Location: '.$bbbsession['logoutURL']);
 		break;
 	    }
 	    bigbluebuttonbn_bbb_view_join_meeting($bbbsession, $bigbluebuttonbn, $origin);
             break;
         }
-	# FIXME check connections on server
-		
+
         // If user is not administrator nor moderator (user is steudent) and waiting is required.
         if (!$bbbsession['administrator'] && !$bbbsession['moderator'] && $bbbsession['wait']) {
             header('Location: '.$bbbsession['logoutURL']);
@@ -283,8 +278,9 @@ switch (strtolower($action)) {
         bigbluebuttonbn_bbb_view_join_meeting($bbbsession, $bigbluebuttonbn, $origin);
         break;
     case 'play':
-	$href = bigbluebuttonbn_bbb_view_playback_href($href, $mid, $rid, $rtype, 
-		$rserver < 1 ? $bigbluebuttonbn->server:$rserver );
+	if(!$href )
+		error_log("bigbluebuttonbn_bbb_view_playback_href {$bigbluebuttonbn->server}",0);
+	$href = bigbluebuttonbn_bbb_view_playback_href($href, $mid, $rid, $rtype, $bigbluebuttonbn->server );
         // Moodle event logger: Create an event for meeting left.
         bigbluebuttonbn_event_log(\mod_bigbluebuttonbn\event\events::$events['recording_play'], $bigbluebuttonbn,
             ['other' => $rid]);
@@ -311,7 +307,8 @@ function bigbluebuttonbn_bbb_view_playback_href($href, $mid, $rid, $rtype, $serv
     if ($href != '' || $mid == '' || $rid == '') {
         return $href;
     }
-    $recordings = bigbluebuttonbn_get_recordings_array($mid, $rid,$server);
+    error_log("bigbluebuttonbn_bbb_view_playback_href $mid, $rid, $rtype, $server",0);
+    $recordings = bigbluebuttonbn_get_recordings_array($mid, $rid, $server);
     if (empty($recordings)) {
         return '';
     }

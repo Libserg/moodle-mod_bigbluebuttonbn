@@ -122,6 +122,8 @@ function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
     $output .= $OUTPUT->heading($desc, 5);
 
     $output .= '<p>Запись:'.array('возможна','отключена','включена')[$type].'</p>';
+
+    // Limit check should be the same with bbb_view.php !!!
     $bbb_rc = bbb_server_restrict();
     $restricted = false;
     if(is_array($bbb_rc)) {
@@ -133,11 +135,10 @@ function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
 		if($bbb_rc[$srv]['denybbbserver']) {
 		    $restricted = 'selected server not allowed';
 		}
-		# FIXME check connection limit
 	    }
 	} else {
 	    $srv_cnt = 0;
-	    $output .= '<p>Server loading ratio: ';
+	    $output .= '<p>Server loading ratio:';
 	    foreach($bbb_rc as $k=>$v) {
     		if(!$k) continue;
 		if($v['denybbbserver']) continue; 
@@ -168,8 +169,8 @@ function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
 	        $restricted = 'Too may connection on server';
     }
 
-    if($ucount > 1 && !$restricted) 
-        $restricted = 'user login limit';
+    if(!$restricted && isset($bbbsession['uidlimit']) && $ucount >= $bbbsession['uidlimit']) 
+        $restricted = 'User login limit';
 
     if ($restricted) {
 	$output .= '<h3>'.$restricted.'</h3>';

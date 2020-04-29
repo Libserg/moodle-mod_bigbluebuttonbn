@@ -71,11 +71,9 @@ class bigbluebutton {
      * @return string
      */
     public static function sanitized_url($server=false) {
-	if($server === false || intval($server) <= 0) {
-                error_log(date("Y-M-d H:m:s",time())." get '$setting' from\n".
-                        format_backtrace(debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT),1),0);
+	if($server === false || intval($server) <= 0)
 		throw new \Exception("sanitized_url");
-	}	
+
 	$cfg = 'server_url';
 	if($server !== false && intval($server) > 0) {
 	    $cfg .= (string)intval($server);
@@ -96,11 +94,9 @@ class bigbluebutton {
      * @return string
      */
     public static function sanitized_secret($server=false) {
-	if($server === false || intval($server) <= 0) {
-                error_log(date("Y-M-d H:m:s",time())." get '$setting' from\n".
-                        format_backtrace(debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT),1),0);
+	if($server === false || intval($server) <= 0)
 		throw new \Exception("sanitized_secret");
-	}
+
        	$cfg = 'shared_secret';
 	if($server !== false && intval($server) > 0) {
 	    $cfg .= (string)intval($server);
@@ -113,8 +109,13 @@ class bigbluebutton {
      *
      * @return string
      */
-    public static function root() {
-        $pserverurl = parse_url(trim(\mod_bigbluebuttonbn\locallib\config::get('server_url')));
+    public static function root($server=false) {
+       	$cfg = 'server_url';
+	if($server !== false && intval($server) > 0) {
+	    $cfg .= (string)intval($server);
+	} else $cfg .= '1';
+
+        $pserverurl = parse_url(trim(\mod_bigbluebuttonbn\locallib\config::get($cfg)));
         $pserverurlport = "";
         if (isset($pserverurl['port'])) {
             $pserverurlport = ":" . $pserverurl['port'];

@@ -63,6 +63,10 @@
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
       </KEYS>
+      <INDEXES>
+        <INDEX NAME="log" UNIQUE="false" FIELDS="log"/>
+        <INDEX NAME="meetingid" UNIQUE="false" FIELDS="meetingid"/>
+      </INDEXES>
     </TABLE>
     <TABLE NAME="bigbluebuttonbn_info" COMMENT="The bigbluebuttonbn table to store meeting info">
       <FIELDS>
