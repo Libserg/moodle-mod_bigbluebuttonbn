@@ -138,7 +138,7 @@ function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
 	    }
 	} else {
 	    $srv_cnt = 0;
-	    $output .= '<p>Server loading ratio:';
+	    # $output .= '<p>Server loading ratio:';
 	    foreach($bbb_rc as $k=>$v) {
     		if(!$k) continue;
 		if($v['denybbbserver']) continue; 
@@ -147,10 +147,10 @@ function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
 		$srv_cnt++;
 		if($info[0]) {
 		    $ratio = intval($info['RC']) * $v['multbbbserver'] / 100 + $v['costbbbserver'];
-		    $output .= ' '.$v[2].':'.$ratio;
+		    #$output .= ' '.$v[2].':'.$ratio;
 		}
 	    }
-	    $output .= '</p>';
+	    #$output .= '</p>';
 	    if(!$srv_cnt)
 		 $restricted = 'No servers available';
 	}

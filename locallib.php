@@ -2866,7 +2866,7 @@ function bigbluebuttonbn_view_instance_bigbluebuttonbn($bigbluebuttonbnid) {
  */
 function bigbluebuttonbn_settings_general(&$renderer) {
     // Configuration for BigBlueButton.
-    if ((boolean) \mod_bigbluebuttonbn\settings\validator::section_general_shown()) {
+    if (false && (boolean) \mod_bigbluebuttonbn\settings\validator::section_general_shown()) {
         $renderer->render_group_header('general');
         $renderer->render_group_element(
             'server_url',
@@ -2877,6 +2877,9 @@ function bigbluebuttonbn_settings_general(&$renderer) {
             $renderer->render_group_element_text('shared_secret', BIGBLUEBUTTONBN_DEFAULT_SHARED_SECRET)
         );
     }
+    $slist = \mod_bigbluebuttonbn\locallib\config::server_list();
+    if(!$slist)
+	$renderer->render_group_header('generalsrv');
 }
 
 /**

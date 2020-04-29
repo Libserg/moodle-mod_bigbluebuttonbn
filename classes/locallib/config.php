@@ -144,29 +144,6 @@ class config {
         return self::defaultvalue($setting);
     }
 
-    public static function select_server() {
-	global $CFG;
-	$servers = array();
-	$last_server = 0;
-	for($i=1; $i < 10; $i++) {
-	   if(isset($CFG->bigbluebuttonbn['server_url'.$i]) &&
-	      isset($CFG->bigbluebuttonbn['shared_secret'.$i]) &&
-	      isset($CFG->bigbluebuttonbn['server_name'.$i])) {
-		$last_server = $i;
-		$servers[$i] = $CFG->bigbluebuttonbn['server_name'.$i];
-	   }
-	}
-	if(!$last_server &&
-	   isset($CFG->bigbluebuttonbn['server_url']) &&
-	   isset($CFG->bigbluebuttonbn['shared_secret']) &&
-	   isset($CFG->bigbluebuttonbn['server_name'])) {
-		$last_server = 1;
-		$servers[1] = $CFG->bigbluebuttonbn['server_name'];
-	} else {
-	   $servers[0] = 'Any';
-	}
-	return $last_server > 0 ? $servers : false;
-    }
     public static function server_list() {
 	global $CFG;
 	$servers = array();
@@ -190,6 +167,20 @@ class config {
 				     $CFG->bigbluebuttonbn['shared_secret'],
 				     $CFG->bigbluebuttonbn['server_name']);
 	}
+	return $last_server > 0 ? $servers : false;
+    }
+
+    public static function select_server() {
+	global $CFG;
+	$servers = self::server_list();
+	$last_server = 0;
+	for($i=1; $i < 10; $i++) {
+	   if(!isset($servers[$i])) break;
+	   $last_server = $i;
+	   $servers[$i] = $servers[$i][2];
+	}
+	if($last_server)
+	   $servers[0] = 'Any';
 	return $last_server > 0 ? $servers : false;
     }
 
