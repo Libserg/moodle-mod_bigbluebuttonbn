@@ -71,14 +71,11 @@ class bigbluebutton {
      * @return string
      */
     public static function sanitized_url($server=false) {
-	if($server === false || intval($server) <= 0)
-		throw new \Exception("sanitized_url");
+	global $CFG;    
+	if($server === false || intval($server) <= 0 || !isset($CFG->bigbluebuttonbn[$server]))
+		throw new \Exception("sanitized_url server ".intval($server));
 
-	$cfg = 'server_url';
-	if($server !== false && intval($server) > 0) {
-	    $cfg .= (string)intval($server);
-	}
-        $serverurl = trim(\mod_bigbluebuttonbn\locallib\config::get($cfg));
+	$serverurl = trim($CFG->bigbluebuttonbn[$server]['server_url']);
         if (substr($serverurl, -1) == '/') {
             $serverurl = rtrim($serverurl, '/');
         }
@@ -94,14 +91,11 @@ class bigbluebutton {
      * @return string
      */
     public static function sanitized_secret($server=false) {
-	if($server === false || intval($server) <= 0)
+	global $CFG;    
+	if($server === false || intval($server) <= 0 || !isset($CFG->bigbluebuttonbn[$server]))
 		throw new \Exception("sanitized_secret");
 
-       	$cfg = 'shared_secret';
-	if($server !== false && intval($server) > 0) {
-	    $cfg .= (string)intval($server);
-	}
-        return trim(\mod_bigbluebuttonbn\locallib\config::get($cfg));
+	return trim($CFG->bigbluebuttonbn[$server]['shared_secret']);
     }
 
     /**
@@ -110,12 +104,11 @@ class bigbluebutton {
      * @return string
      */
     public static function root($server=false) {
-       	$cfg = 'server_url';
-	if($server !== false && intval($server) > 0) {
-	    $cfg .= (string)intval($server);
-	} else $cfg .= '1';
+	global $CFG;    
+	if($server === false || intval($server) <= 0 || !isset($CFG->bigbluebuttonbn[$server]))
+		throw new \Exception("server_url");
 
-        $pserverurl = parse_url(trim(\mod_bigbluebuttonbn\locallib\config::get($cfg)));
+        $pserverurl = parse_url(trim($CFG->bigbluebuttonbn[$server]['server_url']));
         $pserverurlport = "";
         if (isset($pserverurl['port'])) {
             $pserverurlport = ":" . $pserverurl['port'];

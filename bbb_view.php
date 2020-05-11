@@ -206,19 +206,25 @@ switch (strtolower($action)) {
             header('Location: '.$bbbsession['logoutURL']);
 	    break;
 	}
-	if( isset($r_info[$server]['connlimitserver']) &&
+	if (isset($r_info[$server]['connlimitserver']) &&
 	    $s_info['LC'] >= $r_info[$server]['connlimitserver'] ) {
-
-            header('Location: '.$bbbsession['logoutURL']);
+	    $emsg = new stdClass;
+	    $emsg->status = "limit";
+	    $emsg->message = get_string('connlimitmsg', 'bigbluebuttonbn');
+	    header('Location: '.$bbbsession['logoutURL'].'&errors='.
+		    urlencode(json_encode(array($emsg))));
 	    break;
 	}
         // See if the session is in progress.
         if (bigbluebuttonbn_is_meeting_running($bbbsession['meetingid'],false,$server)) {
             // Since the meeting is already running, we just join the session.
-	    #
 	    $ucount = bigbluebuttonbn_get_userid_connect($bbbsession);
 	    if(isset($bbbsession['uidlimit']) && $ucount >= $bbbsession['uidlimit']) {
-            	header('Location: '.$bbbsession['logoutURL']);
+		$emsg = new stdClass;
+		$emsg->status = "limit";
+		$emsg->message = get_string('uidlimitmsg', 'bigbluebuttonbn');
+		header('Location: '.$bbbsession['logoutURL'].'&errors='.
+			urlencode(json_encode(array($emsg))));
 		break;
 	    }
 	    bigbluebuttonbn_bbb_view_join_meeting($bbbsession, $bigbluebuttonbn, $origin);
@@ -484,6 +490,11 @@ function bigbluebuttonbn_bbb_view_errors($serrors, $id) {
     $errors = (array) json_decode(urldecode($serrors));
     $msgerrors = '';
     foreach ($errors as $error) {
+	if(isset($error->status) && $error->status == 'limit') {
+            echo html_writer::tag('p', $error->{'message'}, array('class' => 'alert alert-danger'))."\n";
+	    bigbluebuttonbn_bbb_view_close_window_manually();
+	    return;
+	}
         $msgerrors .= html_writer::tag('p', $error->{'message'}, array('class' => 'alert alert-danger'))."\n";
     }
     echo $OUTPUT->header();

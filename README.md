@@ -14,20 +14,25 @@ For each meeting, you can explicitly select a server or set automatic selection.
 
 The list of BBB servers is specified through the main configuration file.
 
-Each server must have three parameters defined:
-* server name
-* server_url
-* shared_secret
+Each server may have parameters:
+* server name (required)
+* server_url (required)
+* shared_secret (required)
+* denybbbserver (opt)
+* autobbbserver (opt)
+* connlimitserver (opt)
+* costbbbserver (opt)
+* multbbbserver (opt)
 
 
 ```
-$CFG->bigbluebuttonbn['server_name1'] = 'Main server';
-$CFG->bigbluebuttonbn['server_url1'] = 'https://bbb1.example.org/bigbluebutton/';
-$CFG->bigbluebuttonbn['shared_secret1'] = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+$CFG->bigbluebuttonbn[1]['server_name'] = 'Main server';
+$CFG->bigbluebuttonbn[1]['server_url'] = 'https://bbb1.example.org/bigbluebutton/';
+$CFG->bigbluebuttonbn[1]['shared_secret'] = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
 
-$CFG->bigbluebuttonbn['server_name2'] = 'Secondary server';
-$CFG->bigbluebuttonbn['server_url2'] = 'https://bbb2.example.org/bigbluebutton/';
-$CFG->bigbluebuttonbn['shared_secret2'] = 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy';
+$CFG->bigbluebuttonbn[2]['server_name'] = 'Secondary server';
+$CFG->bigbluebuttonbn[2]['server_url'] = 'https://bbb2.example.org/bigbluebutton/';
+$CFG->bigbluebuttonbn[2]['shared_secret'] = 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy';
 ```
 #
 

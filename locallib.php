@@ -34,6 +34,7 @@ global $CFG;
 
 require_once(__DIR__ . '/lib.php');
 
+const BIGBLUEBUTTONBN_MAX_CONN = 200;
 /** @var BIGBLUEBUTTONBN_UPDATE_CACHE boolean set to true indicates that cache has to be updated */
 const BIGBLUEBUTTONBN_UPDATE_CACHE = true;
 /** @var BIGBLUEBUTTONBN_TYPE_ALL integer set to 0 defines an instance type that inclueds room and recordings */
@@ -238,7 +239,7 @@ function bbb_select_server() {
 			continue;
 		if(isset($s['autobbbserver']) && $s['autobbbserver'])
 			continue;
-		$load[$k] = bbb_get_server_info($k,$s);
+		$load[$k] = bbb_get_server_info($k);
 		if(!$load[$k][0]) continue;
 		$ratio = $load[$k]['RC'] * $s['multbbbserver'] / 100 + $s['costbbbserver'];
 		if($s_rc === false || $ratio < $min_rc) {
@@ -260,10 +261,10 @@ function bbb_set_meeting_server($meetingid,$server,$state=0) {
 	if(!$server) throw new \Exception("bbb_set_meeting_server server < 1");
 	$cache = bbb_get_meeting_server_cache();
 	if($state) {
-		error_log("bbb_set_meeting_server $server for $meetingid",0);
+		#error_log("bbb_set_meeting_server $server for $meetingid",0);
 		$cache->set($meetingid,$server);
 	} else {
-		error_log("bbb_del_meeting_server $server for $meetingid",0);
+		#error_log("bbb_del_meeting_server $server for $meetingid",0);
 		$cache->delete($meetingid);
 	}
 }
@@ -1910,7 +1911,7 @@ function bigbluebuttonbn_is_valid_resource($url) {
     $bbbservers = \mod_bigbluebuttonbn\locallib\config::server_list();
     foreach ($bbbservers as $s) {
         // Skip validation when the recording URL host is the same as the configured BBB server.
-	if($s[0] == $urlhost) return true;
+	if($s['server_url'] == $urlhost) return true;
     }
     // Skip validation when the recording URL was already validated.
     $validatedurls = bigbluebuttonbn_cache_get('recordings_cache', 'validated_urls', array());
@@ -3732,24 +3733,25 @@ function bbb_server_restrict() {
 	    $srv = intval($kv[1]);
 	    if(!$srv) continue;
 	    if(!isset($slist[$srv])) continue;
+	    if(isset($slist[$srv][$kv[0]])) continue;
 	    $slist[$srv][$kv[0]] = $v->value;
 	} else {
 	    if($k == 'stopbbb') $slist[0]['stop'] = intval($v->value);
 	    if($k == 'denybbbtxt') $slist[0]['stopmsg'] = $v->value;
 	}
     }
+    $opts = array( 'denybbbserver', 'autobbbserver', 'connlimitserver',
+		   'costbbbserver', 'multbbbserver');
+
     foreach($slist as $srv => $v) {
 	if(!$srv) continue;
-	if(!isset($v['denybbbserver']))
-	    $slist[$srv]['denybbbserver'] = 0;
-	if(!isset($v['autobbbserver']))
-	    $slist[$srv]['autobbbserver'] = 0;
-	if(!isset($v['costbbbserver']) || $v['costbbbserver'] === '' )
-	    $slist[$srv]['costbbbserver'] = 0;
-	if(!isset($v['multbbbserver']) || $v['multbbbserver'] === '' || !$v['multbbbserver'])
+	foreach($opts as $o) {
+	    $slist[$srv][$o] = isset($v[$o]) && $v[$o] !== '' ? $v[$o] : 0;
+	}
+	if($v['multbbbserver'] <= 0)
 	    $slist[$srv]['multbbbserver'] = 100;
-	if(!isset($v['connlimitserver']) || $v['connlimitserver'] === '' || !$v['connlimitserver'])
-	    $slist[$srv]['connlimitserver'] = 200;
+	if($v['connlimitserver'] <= 0 || $v['connlimitserver'] > 300)
+	    $slist[$srv]['connlimitserver'] = BIGBLUEBUTTONBN_MAX_CONN;
     }
     if(!isset($slist[0]['stop'])) $slist[0]['stop'] = 0;
     if(!isset($slist[0]['stopmsg'])) $slist[0]['stopmsg'] = '';

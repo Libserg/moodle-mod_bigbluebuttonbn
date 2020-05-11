@@ -394,7 +394,7 @@ function bigbluebuttonbn_view_warning_default_server(&$bbbsession) {
     $bbbservers = \mod_bigbluebuttonbn\locallib\config::server_list();
     if(!$bbbservers) return '';
     for($i=1; isset($bbbservers[$i]); $i++) {
-	if (BIGBLUEBUTTONBN_DEFAULT_SERVER_URL == $bbbservers[$i][0])
+	if (BIGBLUEBUTTONBN_DEFAULT_SERVER_URL == $bbbservers[$i]['server_url'])
 	    return bigbluebuttonbn_render_warning(get_string('view_warning_default_server', 'bigbluebuttonbn'), 'warning');
     }
     return '';

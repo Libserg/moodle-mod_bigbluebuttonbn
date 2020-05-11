@@ -523,6 +523,8 @@ function bigbluebuttonbn_reset_recordings($courseid) {
     if(!$bsrv) return;
     foreach($bsrv as $server => $sinfo) {
 	if(!$server) continue;
+	if(isset($sinfo['denybbbserver']) && $sinfo['denybbbserver']) continue;
+
 	$recordings = bigbluebuttonbn_get_recordings($courseid, null, false, true, $server);
 	// Remove all the recordings.
 	if(count($recordings) > 0) {

@@ -105,9 +105,9 @@ $string['config_general'] = 'General configuration';
 $string['config_general_description'] = 'These settings are <b>always</b> used';
 $string['config_generalsrv'] = 'General configuration';
 $string['config_generalsrv_description'] = '<h3>No servers list configured!</h3>You must describe the list of BBB servers in the config.php file.<br>Three parameters must be specified on each server:<br>'.
-	' $CFG->bigbluebuttonbn[\'server_nameX\'] = "Server name";<br>'.
-	' $CFG->bigbluebuttonbn[\'server_urlX\'] = "https://bbbX.example.org/bigbludebutton";<br>'.
-	' $CFG->bigbluebuttonbn[\'shared_secretX\'] = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";<br>'.
+	' $CFG->bigbluebuttonbn[X][\'server_name\'] = "Server name";<br>'.
+	' $CFG->bigbluebuttonbn[X][\'server_url\'] = "https://bbbX.example.org/bigbludebutton";<br>'.
+	' $CFG->bigbluebuttonbn[X][\'shared_secret\'] = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";<br>'.
 	' "X" - 1-9';
 $string['config_server_url'] = 'BigBlueButton Server URL';
 $string['config_server_url_description'] = 'The URL of your BigBlueButton server must end with /bigbluebutton/. (This default URL is for a BigBlueButton server provided by Blindside Networks that you can use for testing.)';
@@ -518,4 +518,6 @@ $string['view_mobile_message_reload_page_creation_time_meeting'] = 'You exceeded
 $string['view_mobile_message_groups_not_supported'] = 'This instance is enable to work with groups but the mobile app has not support for this. Please open in desktop if you want to use the group support.';
 $string['server'] = 'Server';
 $string['server_help'] = 'We must select server';
+$string['uidlimitmsg'] = 'Exceeded the connection limit for one account';
+$string['connlimitmsg'] = 'Too many connections for this server';
 

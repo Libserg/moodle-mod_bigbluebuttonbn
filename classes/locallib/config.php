@@ -147,25 +147,30 @@ class config {
     public static function server_list() {
 	global $CFG;
 	$servers = array();
+	$opts = array('server_url'   =>1, 'shared_secret'=>1, 'server_name'  =>1,
+		'denybbbserver'=>0, 'autobbbserver'=>0, 'connlimitserver'=>0,
+		'costbbbserver'=>0, 'multbbbserver'=>0);
 	$last_server = 0;
 	for($i=1; $i < 10; $i++) {
-	   if(isset($CFG->bigbluebuttonbn['server_url'.$i]) &&
-	      isset($CFG->bigbluebuttonbn['shared_secret'.$i]) &&
-	      isset($CFG->bigbluebuttonbn['server_name'.$i])) {
-		$last_server = $i;
-		$servers[$i] = array($CFG->bigbluebuttonbn['server_url'.$i],
-				     $CFG->bigbluebuttonbn['shared_secret'.$i],
-				     $CFG->bigbluebuttonbn['server_name'.$i]);
+	   if (!isset($CFG->bigbluebuttonbn[$i]) || 
+	       !is_array($CFG->bigbluebuttonbn[$i])) continue;
+	   $ok = 1;
+	   foreach($opts as $k=>$v) {
+		if($v && !isset($CFG->bigbluebuttonbn[$i][$k])) {
+		    $ok = 0; break;
+		}
 	   }
+	   if(!$ok) continue;
+	   $last_server = $i;
+	   $servers[$i] = $CFG->bigbluebuttonbn[$i];
+
 	}
 	if(!$last_server &&
 	   isset($CFG->bigbluebuttonbn['server_url']) &&
 	   isset($CFG->bigbluebuttonbn['shared_secret']) &&
 	   isset($CFG->bigbluebuttonbn['server_name'])) {
 		$last_server = 1;
-		$servers[1]  = array($CFG->bigbluebuttonbn['server_url'],
-				     $CFG->bigbluebuttonbn['shared_secret'],
-				     $CFG->bigbluebuttonbn['server_name']);
+		$servers[1]  = $CFG->bigbluebuttonbn;
 	}
 	return $last_server > 0 ? $servers : false;
     }
@@ -177,7 +182,7 @@ class config {
 	for($i=1; $i < 10; $i++) {
 	   if(!isset($servers[$i])) break;
 	   $last_server = $i;
-	   $servers[$i] = $servers[$i][2];
+	   $servers[$i] = $servers[$i]['server_name'];
 	}
 	if($last_server)
 	   $servers[0] = 'Any';
