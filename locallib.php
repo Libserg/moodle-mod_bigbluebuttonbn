@@ -269,6 +269,30 @@ function bbb_set_meeting_server($meetingid,$server,$state=0) {
 	}
 }
 
+function bbb_access_recording_update(&$recordingID) {
+	global $CFG;
+	$cachedir = $CFG->dataroot.'/bbbcache';
+	if(!is_dir($cachedir)) {
+	    if(!mkdir($cachedir,0755))
+		throw new \Exception("Cant create $cachedir");
+	}
+	if(!is_array($recordingID) || !count($recordingID)) return;
+	$ctm = time();
+	foreach($recordingID as $rid => $v) {
+		$rfile = $cachedir .'/'. $rid;
+		$data = file_exists($rfile) ? file_get_contents($rfile,0): false;
+		if($data !== false) {
+			$info = unserialize($data);
+			foreach($info as $sid=>$tv) {
+				if($tv < $ctm - 5*60) unset($info[$sid]);
+			}
+		} else
+			$info = array();
+		$info[session_id()] = $ctm;
+		file_put_contents($rfile,serialize($info));
+	}
+}
+
 function bbb_get_meeting_server($meetingid) {
 	global $DB;
 	$cache = bbb_get_meeting_server_cache();
@@ -467,6 +491,7 @@ function bigbluebuttonbn_get_recordings_array_fetch_page($mids, $server) {
                 }
             }
         }
+	bbb_access_recording_update($recordings);
     }
     return $recordings;
 }
