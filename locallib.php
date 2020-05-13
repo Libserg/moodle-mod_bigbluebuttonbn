@@ -189,7 +189,9 @@ function bbb_get_server_info_real($n) {
 		$rc = $m_c + ($m_v + ($m_v > 4 ? $m_v/3 : 0)) * 10;
 		$trc += $rc;
 	        $m_info[] = array('Name'=> $i->meetingName . '',
-			'LMS'=>((array)$i->metadata)['bbb-context'],
+			'LMS'=>((array)$i->metadata)['bbb-origin-server-name'],
+			'Course'=>((array)$i->metadata)['bbb-context'],
+			'Name'=>((array)$i->metadata)['bbb-recording-name'],
 			'Users'=>$m_c,
 			'Videos'=>$m_v,
 			'Moderators'=>intval($i->moderatorCount),
