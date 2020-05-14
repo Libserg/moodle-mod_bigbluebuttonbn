@@ -1940,7 +1940,7 @@ function bigbluebuttonbn_is_valid_resource($url) {
     $bbbservers = \mod_bigbluebuttonbn\locallib\config::server_list();
     foreach ($bbbservers as $s) {
         // Skip validation when the recording URL host is the same as the configured BBB server.
-	if($s['server_url'] == $urlhost) return true;
+	if($urlhost == parse_url($s['server_url'],PHP_URL_HOST)) return true;
     }
     // Skip validation when the recording URL was already validated.
     $validatedurls = bigbluebuttonbn_cache_get('recordings_cache', 'validated_urls', array());
