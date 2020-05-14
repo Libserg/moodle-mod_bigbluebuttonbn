@@ -520,4 +520,4 @@ $string['server'] = 'Server';
 $string['server_help'] = 'We must select server';
 $string['uidlimitmsg'] = 'Exceeded the connection limit for one account';
 $string['connlimitmsg'] = 'Too many connections for this server';
-
+$string['crontask'] = 'Clear expired cache data';

@@ -271,7 +271,7 @@ function bbb_set_meeting_server($meetingid,$server,$state=0) {
 	}
 }
 
-function bbb_access_recording_update(&$recordingID) {
+function bbb_access_recording_update($recordingID) {
 	global $CFG;
 	$cachedir = $CFG->dataroot.'/bbbcache';
 	if(!is_dir($cachedir)) {
@@ -470,10 +470,12 @@ function bigbluebuttonbn_get_recordings_array_fetch_page($mids, $server) {
     $xml = bigbluebuttonbn_wrap_xml_load_file($url);
     if ($xml && $xml->returncode == 'SUCCESS' && isset($xml->recordings)) {
         // If there were meetings already created.
+	$recID = array();
         foreach ($xml->recordings->recording as $recordingxml) {
             $recording = bigbluebuttonbn_get_recording_array_value($recordingxml);
             $recordings[$recording['recordID']] = $recording;
             $recordings[$recording['recordID']]['server'] = $server;
+            $recID[$recording['recordID']] = 1;
 
             // Check if there is childs.
             if (isset($recordingxml->breakoutRooms->breakoutRoom)) {
@@ -493,7 +495,7 @@ function bigbluebuttonbn_get_recordings_array_fetch_page($mids, $server) {
                 }
             }
         }
-	bbb_access_recording_update($recordings);
+	bbb_access_recording_update($recID);
     }
     return $recordings;
 }
@@ -3812,4 +3814,20 @@ if(isset($rc[0]['stop']) && $rc[0]['stop']) {
     return 1;
 }
 return 0;
+}
+
+function bbb_cron() {
+	global $CFG;
+	echo "OK\n";
+	$cachedir = $CFG->dataroot.'/bbbcache';
+	if(!is_dir($cachedir)) {
+		return 0;
+	}
+	$ctm = time();
+	foreach(glob($cachedir.'/*-*') as $rid => $v) {
+		if(filemtime($v) < $ctm - 3*3600) {
+			unlink($v);
+			echo "Delete $v\n";
+		}
+	}
 }
