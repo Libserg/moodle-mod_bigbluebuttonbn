@@ -149,8 +149,61 @@ function bbb_request_fast($url) {
 	}
 }
 
+function bbb_server_check_real($n) {
+	$server_url = \mod_bigbluebuttonbn\locallib\bigbluebutton::root($n);
+	if (extension_loaded('curl')) {
+	    $ch = curl_init($server_url.'/index.html');
+	    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: text/html'));
+	    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+	    curl_setopt($ch, CURLOPT_TIMEOUT , 1);
+	    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT , 1);
+	    curl_setopt($ch, CURLOPT_RETURNTRANSFER , true);
+	    $ret = curl_exec($ch);
+	    $code =  curl_getinfo($ch,CURLINFO_HTTP_CODE);
+#	    error_log("bbb_server_check $n $code",0);
+	    curl_close($ch);
+	    return $code == 200 ? 1 : 0 ;
+	} else {
+	    return 0;
+	}
+}
+
+function bbb_server_bad_trace($server) {
+        error_log("bbb_server_check '$server'\n".
+	      format_backtrace(debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT),1),0);
+}
+
+function bbb_server_check($n) {
+	global $CFG;
+	if(isset($CFG->bigbluebuttonbn[$n]['off']))
+		return 0;
+	$cachedir = $CFG->dataroot.'/bbbcache';
+	if(!is_dir($cachedir)) {
+	    if(!mkdir($cachedir,0755))
+		throw new \Exception("Cant create $cachedir");
+	}
+	$sfile = $cachedir.'/server_check_'.$n;
+	$ctm = time();
+	if(file_exists($sfile) && filemtime($sfile) > $ctm - 5) {
+		$data = file_get_contents($sfile,0);
+		if($data != '1') bbb_server_bad_trace($n);
+		return $data == '1' ? 1:0;
+	}
+	if(bbb_server_check_real($n)) {
+		file_put_contents($sfile,'1');
+		return 1;
+	}
+	file_put_contents($sfile,'0');
+	#error_log("bbb_server_check $n FAILED",0);
+	bbb_server_bad_trace($n);
+	return 0;
+}
+
 function bbb_get_server_info_real($n) {
 
+	if(!bbb_server_check($n)) {
+	    return array(0=>0,'MSG'=>'Error');
+	}
 	$res = bbb_request_fast(
 		\mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('getMeetings',[],[],$n)
 	);
@@ -359,6 +412,7 @@ function bigbluebuttonbn_get_create_meeting_array($data, $metadata = array(), $p
  * @return array
  */
 function bigbluebuttonbn_get_meeting_info_array($meetingid, $server=false) {
+  if(bbb_server_check($server)) {
     $xml = bigbluebuttonbn_wrap_xml_load_file(
         \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('getMeetingInfo', ['meetingID' => $meetingid],
              array(),$server)
@@ -384,8 +438,9 @@ function bigbluebuttonbn_get_meeting_info_array($meetingid, $server=false) {
         // Either failure or success without meeting info.
         return (array) $xml;
     }
+  }
     // If the server is unreachable, then prompts the user of the necessary action.
-    return array('returncode' => 'FAILED', 'message' => 'unreachable', 'messageKey' => 'Server is unreachable');
+  return array('returncode' => 'FAILED', 'message' => 'unreachable', 'messageKey' => 'Server is unreachable');
 }
 
 /**
@@ -467,6 +522,8 @@ function bigbluebuttonbn_get_recordings_array_fetch_page($mids, $server) {
     // Do getRecordings is executed using a method GET (supported by all versions of BBB).
     $url = \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('getRecordings', ['meetingID' => implode(',', $mids)],
 	    array(),$server);
+    if(!bbb_server_check($server)) return $recordings;
+
     $xml = bigbluebuttonbn_wrap_xml_load_file($url);
     if ($xml && $xml->returncode == 'SUCCESS' && isset($xml->recordings)) {
         // If there were meetings already created.
@@ -737,6 +794,9 @@ function bigbluebuttonbn_end_meeting($meetingid, $modpw, $server=false) {
  * @return string
  */
 function bigbluebuttonbn_get_server_version($server=false) {
+    if(!bbb_server_check($server)) {
+    	return null;
+    }
     $xml = bigbluebuttonbn_wrap_xml_load_file(
         \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('', array(), array(), $server)
     );
@@ -1428,6 +1488,9 @@ function bigbluebuttonbn_get_meeting_info($meetingid, $updatecache = false, $ser
     if (!$updatecache && isset($result) && $now < ($result['creation_time'] + $cachettl)) {
         // Use the value in the cache.
         return (array) json_decode($result['meeting_info']);
+    }
+    if(!bbb_server_check($server)) {
+	    return false;
     }
     // Ping again and refresh the cache.
     $meetinginfo = (array) bigbluebuttonbn_wrap_xml_load_file(

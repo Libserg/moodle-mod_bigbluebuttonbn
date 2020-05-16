@@ -106,6 +106,10 @@ try {
     if(!$bbbsession['server'])
 	    error_log("ERROR no server for {$bbbsession['meetingid']}",0);
 
+    if($bbbsession['server'] && !bbb_server_check($bbbsession['server'])) {
+	header('HTTP/1.0 400 Bad request. The action '. $a . ' doesn\'t exist');
+	exit(0);
+    }
     if ($a == 'meeting_end') {
         $meetingend = bigbluebuttonbn_broker_meeting_end($bbbsession, $params);
         echo $meetingend;

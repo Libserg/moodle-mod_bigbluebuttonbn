@@ -65,7 +65,7 @@ if($bigbluebuttonbn->server > 0) {
       $errmsg = 'view_error_unable_join_student';
       $errurl = '/course/view.php';
       $errurlparams = ['id' => $bigbluebuttonbn->course];
-      if ($bbbsession['administrator']) {
+      if (0 && $bbbsession['administrator']) {
           $errmsg = 'view_error_unable_join';
           $errurl = '/admin/settings.php';
           $errurlparams = ['section' => 'modsettingbigbluebuttonbn'];
