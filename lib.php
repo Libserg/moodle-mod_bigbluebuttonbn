@@ -1144,6 +1144,7 @@ function mod_bigbluebuttonbn_core_calendar_provide_event_action(
     // Get bigbluebuttonbn activity.
     $bigbluebuttonbn = $DB->get_record('bigbluebuttonbn', array('id' => $event->instance), '*', MUST_EXIST);
 
+    if(!$bigbluebuttonbn->server) return null;
     // Get if the user has joined in live session or viewed the recorded.
     $usercomplete = bigbluebuttonbn_user_complete($event->courseid, $event->userid, $bigbluebuttonbn);
     // Get if the room is available.
