@@ -116,7 +116,7 @@ function check_moodle_session($sid) {
 			die;
 		}
 		if(check_moodle_session($sid)) {
-			error_log("check_moodle_session $sid OK\n",0);
+			#error_log("check_moodle_session $sid OK\n",0);
 			file_put_contents($sfile,'1');
 			header("HTTP/1.0 200 OK");
 			die;
