@@ -169,7 +169,7 @@ function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
 	        $restricted = 'Too may connection on server';
     }
 
-    if(!$restricted && isset($bbbsession['uidlimit']) && $ucount >= $bbbsession['uidlimit']) 
+    if(!$restricted && isset($bbbsession['uidlimit']) && $ucount > 0 && $ucount >= $bbbsession['uidlimit']) 
         $restricted = 'User login limit';
 
     if ($restricted) {
