@@ -35,6 +35,7 @@ use mod_bigbluebuttonbn\plugin;
 $dbg = 0;
 $NO_REC = array();
 $EIDs = array();
+$server = '1';
 
 # help() {{{{
 function help($a='') {
@@ -162,10 +163,10 @@ function get_empty_info() {
 
 list($options, $unrecognized) = cli_get_params(
         array('help' => false,
-                'verbose'=>false,'sync'=>false,
+                'verbose'=>false,'sync'=>false, 'server'=>false,
                 'id'=>false, 'idn'=>false, 'check'=>false,
                 'list'=>false),
-        array('h' => 'help', 'v'=>'verbose',
+        array('h' => 'help', 'v'=>'verbose', 'S'=>'server',
                 'l'=>'list')
 );
 
@@ -181,21 +182,27 @@ if($options['list']) {
     echo "List\n";
     exit(0);
 }
-    $ar = file_get_contents('rec_info/record_all');
+if(isset($options['server'])) {
+    $server = intval($options['server']).'';
+}
+
+    $ar = file_get_contents("rec_info{$server}/record_all");
     foreach(explode("\n",$ar) as $l) {
+        if(!$l) continue;
         list($mid,$eid) = explode(" ",$l);
-        if(!$eid || !$mid) continue;
+        if(!$eid || !$mid) { echo "BAD $l\n"; continue;}
         if(!isset($EIDs[$eid])) $EIDs[$eid] = [];
         $EIDs[$eid][$mid] = [];
     }
-    foreach(glob('rec_info/*') as $f1) {
-        if($f1 == 'rec_info/record_all') continue;
+    foreach(glob("rec_info{$server}/*") as $f1) {
+        if($f1 == "rec_info{$server}/record_all") continue;
         $info = explode("\n",file_get_contents($f1));
         $id = false;
         $eid = false;
         $start = false;
         $len = false;
         foreach($info as $l) {
+            if(!$l) continue;
             list($k,$v) = explode(":",$l);
             if(!$k) continue;
             $v = trim(rtrim($v));
@@ -206,20 +213,24 @@ if($options['list']) {
         }
         if($id && $eid) {
             if(!isset($EIDs[$eid])) $EIDs[$eid] = [];
-            if(!isset($EIDs[$eid][$id])) $EIDs[$eid][$id] = [];
+#            if(!isset($EIDs[$eid][$id])) $EIDs[$eid][$id] = [];
             $EIDs[$eid][$id] = [$start,$start+$len,$eid];
+            if(!$start || !($start+$len)) {
+                print_r($EIDs[$eid][$id]);
+                die;
+            }
         }
     }
 #    print_r($EIDs);
 #    exit(0);
 if($options['check']) {
     $logs_rec = $DB->get_records_sql(
-        "select id,meetingid,timecreated from {bigbluebuttonbn_logs} where log = ?",array('Create'));
+        "select id,meetingid,timecreated,server from {bigbluebuttonbn_logs} where log = ?",array('Create'));
     foreach($logs_rec as $id => $r) {
         if(!isset($EIDs[$r->meetingid])) {
 #            echo "UNK $id $r->meetingid\n";
         } else {
-            $info = bigbluebuttonbn_get_recordings_array_cached($r->meetingid,1);
+            $info = bigbluebuttonbn_get_recordings_array_cached($r->meetingid,$server);
             if(!$info) echo "BAD $id $r->meetingid\n";
               else
                 echo "OK $id $r->meetingid\n";
@@ -231,7 +242,7 @@ if($options['check']) {
 
 if($options['sync']) {
     $logs_rec = $DB->get_records_sql("
-        select id,meetingid,timecreated from {bigbluebuttonbn_logs} where 
+        select id,meetingid,timecreated,server from {bigbluebuttonbn_logs} where 
         log = ? and norecinfo = 0 and id not in (select id from {bigbluebuttonbn_info})",array('Create'));
     #print_r($logs_rec);
     $n = 5000;
@@ -275,6 +286,9 @@ function bigbluebuttonbn_get_recordings_array_cached($rec,$server=1) {
     }
     $info = array();
     foreach($EIDs[$rec] as $id=>$v) {
+        if(!isset($v[0]) || !isset($v[1])) {
+            return false;
+        }
         $info[$id] = [];
         $info[$id]['startTime'] = $v[0].'000';
         $info[$id]['endTime'] = $v[1].'000';
@@ -289,18 +303,18 @@ function bigbluebuttonbn_get_recordings_array_cached($rec,$server=1) {
 }
 
 function add_rec_info($rec,$dbg = false,$timecreated = 0) {
-    global $DB,$NO_REC;
+    global $DB,$NO_REC,$server;
     $logs_rec = $DB->get_records('bigbluebuttonbn_logs',array('meetingid'=>$rec,'log'=>'Create'),'','*');
     if(!count($logs_rec)) {
         throw new \Exception("Bad log rec $rec");
     }
     $ilog_rec = $DB->get_records('bigbluebuttonbn_info',array('meetingid'=>$rec),'','*');
-    $info = bigbluebuttonbn_get_recordings_array_cached($rec,1);
+    $info = bigbluebuttonbn_get_recordings_array_cached($rec,$server);
     if(!$info) {
         if($timecreated && $timecreated < time() - 2*24*3600) {
             foreach($logs_rec as $lid => $logs) {
                 if(isset($ilog_rec[$lid])) continue;
-                $DB->update_record('bigbluebuttonbn_logs',(object)array('id'=>$lid,'norecinfo'=>1));
+                $DB->update_record('bigbluebuttonbn_logs',(object)array('id'=>$lid,'norecinfo'=>1,'server'=>$server));
             }
             echo "OLDREC $rec\n";
         } else 
@@ -360,6 +374,7 @@ foreach($info as $imid => $m_info) {
                 continue;
             }
             $rec_info['id'] = $lid;
+            $rec_info['server'] = $server;
 #            print_r(array($lid,$m_info['recordID'],$rec_info));
             $DB->insert_record_raw('bigbluebuttonbn_info',$rec_info,false,false,true);
             $ilog_rec[$lid] = 1;
@@ -376,7 +391,7 @@ foreach($info as $imid => $m_info) {
         }
         $ltc = intval($logs->timecreated);
         if($ltc > time() - 2*24*3600) continue;
-        $DB->update_record('bigbluebuttonbn_logs',(object)array('id'=>$lid,'norecinfo'=>1));
+        $DB->update_record('bigbluebuttonbn_logs',(object)array('id'=>$lid,'norecinfo'=>1,'server'=>$server));
     }
 }
 
