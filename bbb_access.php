@@ -37,6 +37,7 @@
     }
  */
 $data = false;
+$ctm = time();
 
 function check_moodle_session($sid) {
 	require(__DIR__.'/../../config.php');
@@ -52,77 +53,83 @@ function check_moodle_session($sid) {
 		if(file_exists($sfile)) {
 			$sdata = session_decode(file_get_contents($sfile,0));
 			if ($sdata !== false &&
-				$_SESSION['USER']->currentlogin > time()-3*3600) {
-				return 1;
+				$_SESSION['USER']->lastaccess > $ctm-3*3600) {
+			    error_log("check_moodle_session OK ".$_SESSION['USER']->lastaccess."\n",0);
+			    return 1;
 			}
-			error_log("check_moodle_session too old ".$_SESSION['USER']->currentlogin."\n",0);
+			error_log("check_moodle_session too old ".($ctm - $_SESSION['USER']->lastaccess)."\n",0);
 		}
-		#error_log("check_moodle_session $sclass $sfile NO\n",0);
 		return 0;
 	}
 	error_log("check_moodle_session $sclass NO\n",0);
 	return 0;
 }
+    #header("HTTP/1.0 200 OK");
+    #die;
 
-	$rfile = __DIR__.'/../../config.php';
-	$data = file_exists($rfile) ? file_get_contents($rfile,0): false;
-	if(!preg_match(':\$CFG->dataroot\s+=\s+[\"\']([^\'\"]+)[\"\'];:',$data,$matched)) {
-		header("HTTP/1.0 403 Forbidden");
-		die;
-	}
-	$dataroot = $matched[1];
-
-	if (!isset($_SERVER['HTTP_X_SID']) ||
-	    !isset($_SERVER['HTTP_X_HREF'])) {
-		header("HTTP/1.0 403 Forbidden");
-		die;
-	    }
-	$sid = $_SERVER['HTTP_X_SID'];
-	if(!preg_match('/^[0-9a-f]+$/',$sid)) {
-		header("HTTP/1.0 403 Forbidden");
-		die;
-	}
-	$href = $_SERVER['HTTP_X_HREF'];
-	$rid='';
-	if(preg_match(':meetingId=([0-9a-f-]+):',$href,$matches)) {
-		$rid = $matches[1];
-	}
-	elseif(preg_match(':/presentation/([0-9a-f-]+)/:',$href,$matches)) {
-		$rid = $matches[1];
-	} else {
-		#error_log("bad href $sid $href\n",0);
-		header("HTTP/1.0 200 OK");
-		die;
-	}
-	#error_log("check href $sid $href\n",0);
+    $rfile = __DIR__.'/../../config.php';
+    $data = file_exists($rfile) ? file_get_contents($rfile,0): false;
+    if(!preg_match(':\$CFG->dataroot\s+=\s+[\"\']([^\'\"]+)[\"\'];:',$data,$matched)) {
+    	header("HTTP/1.0 403 Forbidden");
+    	die;
+    }
+    $dataroot = $matched[1];
+    
+    if (!isset($_SERVER['HTTP_X_SID']) ||
+        !isset($_SERVER['HTTP_X_HREF'])) {
+    	header("HTTP/1.0 403 Forbidden");
+    	die;
+        }
+    $sid = $_SERVER['HTTP_X_SID'];
+    if(!preg_match('/^[0-9a-f]+$/',$sid)) {
+    	header("HTTP/1.0 403 Forbidden");
+    	die;
+    }
+    $href = $_SERVER['HTTP_X_HREF'];
+    $srv=$_SERVER['HTTP_X_SRC'] ?? '?';
+    $rid='';
+    if(preg_match(':/meetingId=([0-9a-f-]+):',$href,$matches)) {
+    	$rid = $matches[1];
+    } elseif(preg_match(':/presentation/([0-9a-f-]+)/:',$href,$matches)) {
+    	$rid = $matches[1];
+    } else {
+    	# error_log("check href NO restrict $srv $sid $href\n",0);
+    	header("HTTP/1.0 200 OK");
+    	die;
+    }
+    $ret = false;
+    $msg = '';
+    do {
 
 	$cachedir = $dataroot.'/bbbcache';
-	if(!is_dir($cachedir)) {
-		header("HTTP/1.0 403 Forbidden");
-		die;
-	}
-	$ctm = time();
+	if(!is_dir($cachedir)) break;
 	$rfile = $cachedir .'/'. $rid;
 	$data = file_exists($rfile) ? file_get_contents($rfile,0): false;
 	if($data === false) {
-		header("HTTP/1.0 403 Forbidden");
-		die;
+		$msg = "No rid";
+		break;
 	}
 	$info = unserialize($data);
 	if(is_array($info) && isset($info[$sid]) && $info[$sid] > $ctm - 5*60) {
 		$sfile = $cachedir .'/sid_'. $sid;
 		if(file_exists($sfile) && filemtime($sfile) > $ctm - 1*60) {
-			header("HTTP/1.0 200 OK");
-			die;
+			$ret = true;
+			break;
 		}
 		if(check_moodle_session($sid)) {
 			#error_log("check_moodle_session $sid OK\n",0);
 			file_put_contents($sfile,'1');
-			header("HTTP/1.0 200 OK");
-			die;
+			$ret = true;
+			break;
 		} else {
 			if(file_exists($sfile)) unlink($sfile);
+			$msg = " SID bad";
 		}
+	} else {
+		$msg = " RID old";
 	}
-	header("HTTP/1.0 403 Forbidden");
-	die;
+    } while(false);
+    if(!$ret)
+        error_log("check href $srv $sid $href ".($ret ? "OK":"BAD")."$msg\n",0);
+    header($ret ? "HTTP/1.0 200 OK":"HTTP/1.0 403 Forbidden");
+    die;
