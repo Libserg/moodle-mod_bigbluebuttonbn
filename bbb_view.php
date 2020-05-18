@@ -187,6 +187,13 @@ switch (strtolower($action)) {
         }
 
 	if($bbbsession['server'] == 0) {
+	    $srv_last = bbb_get_meeting_server($bbbsession['meetingid']);
+	    if($srv_last && bigbluebuttonbn_is_meeting_running($bbbsession['meetingid'],false,$srv_last)) {
+	        $bbbsession['server'] = $srv_last;
+	        $bigbluebuttonbn->server = $srv_last;
+	    }
+	}
+	if($bbbsession['server'] == 0) {
 	    $server = bbb_select_server();
 	    if($server === false) {
 		print_error('general_error_unable_connect', 'bigbluebuttonbn',
