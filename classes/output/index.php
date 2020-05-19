@@ -123,6 +123,20 @@ class index implements renderable {
             $urlparams['group'] = $groupobj->id;
             $groupname = $groupobj->name;
         }
+	if(!$bigbluebuttonbn->server) {
+		$srv_last = bbb_get_meeting_server($meetingid);
+		if ($srv_last > 0 && 
+		    bigbluebuttonbn_is_meeting_running($meetingid,false,$srv_last))
+			$bigbluebuttonbn->server = $srv_last;
+	}
+
+	if(!$bigbluebuttonbn->server) {
+	        $joinurl = html_writer::link(
+        	    plugin::necurl('/mod/bigbluebuttonbn/view.php', $urlparams),
+	            format_string($bigbluebuttonbn->name)
+        	);
+        	return array($bigbluebuttonbn->section, $joinurl, $groupname, '', '', '', '', '');
+	}
         $meetinginfo = bigbluebuttonbn_get_meeting_info_array($meetingid,$bigbluebuttonbn->server);
         if (empty($meetinginfo)) {
             // The server was unreachable.
