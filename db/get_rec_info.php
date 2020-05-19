@@ -81,33 +81,19 @@ $strpar = array(
 	"deskshare"=>"deskshare_size");
 
 function get_mid_info($mid) {
-global $strpar;	
+global $strpar,$server;	
     $ret = array();
     $result = '';
 
-    if(file_exists("rec_info/$mid"))
-        $result = file_get_contents("rec_info/$mid");
-    if(0) {
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_COOKIEFILE, "");
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0); // On dev server only!
-        curl_setopt($ch, CURLOPT_VERBOSE, false);
-
-        curl_setopt($ch, CURLOPT_URL, 'https://bbb2.guap.ru/meeting_id/'.urlencode($mid));
-        $result = curl_exec($ch);
-        curl_close($ch);
-    }
+    if(file_exists("rec_info{$server}/$mid"))
+        $result = file_get_contents("rec_info{$server}/$mid");
     #print_r($result);
 
     foreach(explode("\n",$result) as $l) {
         if(!strchr($l,":")) continue;
         list($field, $data) = preg_split('/\s*:\s*/', $l);
         if(!array_key_exists($field,$strpar)) continue;
-    #	echo "! '$field' {$strpar[$field]} : $data\n";
+    	#echo "! '$field' {$strpar[$field]} : $data\n";
         $ret[$strpar[$field]] = $data;
     }
     if(count($ret)) {
@@ -177,13 +163,14 @@ $USER = get_admin();
 foreach ($options as $k=>$v) {
     if(!isset($v)) $options[$k] = false;
 }
-
 if($options['list']) {
     echo "List\n";
     exit(0);
 }
 if(isset($options['server'])) {
-    $server = intval($options['server']).'';
+    if(!isset($unrecognized[0])) die;
+    $server = intval($unrecognized[0]);
+    if(!$server) die;
 }
 
     $ar = file_get_contents("rec_info{$server}/record_all");
@@ -194,6 +181,7 @@ if(isset($options['server'])) {
         if(!isset($EIDs[$eid])) $EIDs[$eid] = [];
         $EIDs[$eid][$mid] = [];
     }
+
     foreach(glob("rec_info{$server}/*") as $f1) {
         if($f1 == "rec_info{$server}/record_all") continue;
         $info = explode("\n",file_get_contents($f1));
@@ -225,10 +213,11 @@ if(isset($options['server'])) {
 #    exit(0);
 if($options['check']) {
     $logs_rec = $DB->get_records_sql(
-        "select id,meetingid,timecreated,server from {bigbluebuttonbn_logs} where log = ?",array('Create'));
+        "select id,meetingid,timecreated,server from {bigbluebuttonbn_logs} where server= ? and log = ?",
+            array($server,'Create'));
     foreach($logs_rec as $id => $r) {
         if(!isset($EIDs[$r->meetingid])) {
-#            echo "UNK $id $r->meetingid\n";
+            echo "UNK $id $r->meetingid\n";
         } else {
             $info = bigbluebuttonbn_get_recordings_array_cached($r->meetingid,$server);
             if(!$info) echo "BAD $id $r->meetingid\n";
@@ -243,8 +232,10 @@ if($options['check']) {
 if($options['sync']) {
     $logs_rec = $DB->get_records_sql("
         select id,meetingid,timecreated,server from {bigbluebuttonbn_logs} where 
-        log = ? and norecinfo = 0 and id not in (select id from {bigbluebuttonbn_info})",array('Create'));
+        server= ? and log = ? and norecinfo = 0 and id not in (select id from {bigbluebuttonbn_info} where server = ?)",
+            array($server,'Create',$server));
     #print_r($logs_rec);
+    echo "db rec noinfo ",count($logs_rec),"\n";
     $n = 5000;
     foreach($logs_rec as $rec) {
         if(isset($NO_REC[$rec->meetingid])) continue;
@@ -304,12 +295,14 @@ function bigbluebuttonbn_get_recordings_array_cached($rec,$server=1) {
 
 function add_rec_info($rec,$dbg = false,$timecreated = 0) {
     global $DB,$NO_REC,$server;
-    $logs_rec = $DB->get_records('bigbluebuttonbn_logs',array('meetingid'=>$rec,'log'=>'Create'),'','*');
+    $logs_rec = $DB->get_records('bigbluebuttonbn_logs',array('meetingid'=>$rec,'log'=>'Create','server'=>$server),'','*');
     if(!count($logs_rec)) {
         throw new \Exception("Bad log rec $rec");
     }
-    $ilog_rec = $DB->get_records('bigbluebuttonbn_info',array('meetingid'=>$rec),'','*');
+    #echo "logs_rec "; print_r($logs_rec);
+    $ilog_rec = $DB->get_records('bigbluebuttonbn_info',array('meetingid'=>$rec,'server'=>$server),'','*');
     $info = bigbluebuttonbn_get_recordings_array_cached($rec,$server);
+    #echo "info "; print_r($info);
     if(!$info) {
         if($timecreated && $timecreated < time() - 2*24*3600) {
             foreach($logs_rec as $lid => $logs) {
