@@ -2682,6 +2682,7 @@ function bigbluebuttonbn_get_recordings($courseid = 0, $bigbluebuttonbnid = null
 	    if(count($rs) > 0)
 		    $ret = array_merge($ret,$rs);
     }
+    uasort($ret, 'bigbluebuttonbn_recording_build_sorter');
     // Get actual recordings.
     return $ret;
 }
