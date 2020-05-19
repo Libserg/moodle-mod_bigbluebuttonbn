@@ -103,8 +103,8 @@ try {
 	if($rserver > 0)
 	    $bbbsession['server'] = $rserver;
     }
-    if(!$bbbsession['server'])
-	    error_log("ERROR no server for {$bbbsession['meetingid']}",0);
+#    if(!$bbbsession['server'])
+#	    error_log("ERROR no server for {$bbbsession['meetingid']}",0);
 
     if($bbbsession['server'] && !bbb_server_healt($bbbsession['server'])) {
 	header('HTTP/1.0 400 Bad request. The action '. $a . ' doesn\'t exist');

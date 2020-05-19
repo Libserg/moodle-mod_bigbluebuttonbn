@@ -367,8 +367,7 @@ function bbb_get_meeting_server($meetingid) {
 		$cache->set($meetingid,[time(),$server]);
 		break;
 	}
-	if(!$server)
-		error_log("bbb_get_meeting_server NOTFOUND server for $meetingid",0);
+#	if(!$server) error_log("bbb_get_meeting_server NOTFOUND server for $meetingid",0);
 	return $server;
 }
 

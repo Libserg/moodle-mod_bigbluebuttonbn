@@ -105,8 +105,11 @@ class bigbluebutton {
      */
     public static function root($server=false) {
 	global $CFG;    
-	if($server === false || intval($server) <= 0 || !isset($CFG->bigbluebuttonbn[$server]))
+	if($server === false || intval($server) <= 0 || !isset($CFG->bigbluebuttonbn[$server])) {
+                error_log(date("Y-M-d H:m:s",time())." get '$server' root\n".
+			format_backtrace(debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT),1),0);
 		throw new \Exception("server_url");
+	}
 
         $pserverurl = parse_url(trim($CFG->bigbluebuttonbn[$server]['server_url']));
         $pserverurlport = "";
