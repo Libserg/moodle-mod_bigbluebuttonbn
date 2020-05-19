@@ -390,8 +390,11 @@ function bigbluebuttonbn_bbb_view_create_meeting_data(&$bbbsession) {
 
     $data['welcome'] = trim($bbbsession['welcome']);
     // Set the duration for the meeting.
+    
+    $durationtimelimit = $bbbsession['bigbluebuttonbn']->durationlimit ?? 0;
     $durationtime = bigbluebuttonbn_bbb_view_create_meeting_data_duration($bbbsession['bigbluebuttonbn']->closingtime);
-    if ($durationtime > 0) {
+    if ($durationtime > 0 || $durationtimelimit > 0) {
+	if($durationtimelimit < $durationtime || !$durationtime) $durationtime = $durationtimelimit;
         $data['duration'] = $durationtime;
         $data['welcome'] .= '<br><br>';
         $data['welcome'] .= str_replace(

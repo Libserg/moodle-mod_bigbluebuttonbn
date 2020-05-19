@@ -168,6 +168,14 @@ if(0) {
                 $errors['userlimit'] = 'We have a limit 120 users per room.';
             }
         }
+        if (isset($data['durationlimit'])) {
+            $cfg = \mod_bigbluebuttonbn\locallib\config::get_options();
+	    if (isset($cfg['durationlimit_default']) && 
+		intval($cfg['durationlimit_default']) > 0 &&
+                intval($data['durationlimit']) > intval($cfg['durationlimit_default'])) {
+                $errors['durationlimit'] = "We have a limit {$cfg['durationlimit_default']} minutes for duration of meeting.";
+            }
+        }
 #        if (!isset($data['server']) || !intval($data['server']) ) {
 #                $errors['server'] = 'Server not selected.';
 #        }
@@ -354,6 +362,14 @@ if(0) {
         }
         $this->bigbluebuttonbn_mform_add_element($mform, $field['type'], $field['name'], $field['data_type'],
             $field['description_key'], $cfg['uidlimit_default']);
+        $field = ['type' => 'hidden', 'name' => 'durationlimit', 'data_type' => PARAM_INT, 'description_key' => null];
+        if ($cfg['durationlimit_editable']) {
+            $field['type'] = 'text';
+            $field['data_type'] = PARAM_TEXT;
+            $field['description_key'] = 'mod_form_field_durationlimit';
+        }
+        $this->bigbluebuttonbn_mform_add_element($mform, $field['type'], $field['name'], $field['data_type'],
+            $field['description_key'], $cfg['durationlimit_default']);
         $field = ['type' => 'hidden', 'name' => 'record', 'data_type' => PARAM_INT, 'description_key' => null];
         if ($cfg['recording_editable']) {
             $field['type'] = 'checkbox';

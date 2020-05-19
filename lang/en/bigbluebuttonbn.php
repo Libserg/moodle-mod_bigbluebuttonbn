@@ -206,6 +206,13 @@ $string['config_uidlimit_default_description'] = 'The number of users allowed in
 $string['config_uidlimit_editable'] = 'User limit feature can be edited';
 $string['config_uidlimit_editable_description'] = 'User limit value by default can be edited when the room or conference is added or updated.';
 
+$string['config_durationlimit'] = 'Configuration for "duration limit" feature';
+$string['config_durationlimit_description'] = 'These settings enable or disable options in the UI and also define default values for these options.';
+$string['config_durationlimit_default'] = 'Duration of meeting is limited by default';
+$string['config_durationlimit_default_description'] = 'The number of minutes for meeting maximim duration. If the number is set to 0, no limit meetings duration.';
+$string['config_durationlimit_editable'] = 'Duration limit feature can be edited';
+$string['config_durationlimit_editable_description'] = 'Meetings duration value by default can be edited when the room or conference is added or updated.';
+
 $string['config_scheduled'] = 'Configuration for "Scheduled sessions"';
 $string['config_scheduled_description'] = 'These settings define some of the behaviour by default for scheduled sessions.';
 $string['config_scheduled_duration_enabled'] = 'Calculate duration enabled';
@@ -275,6 +282,8 @@ $string['mod_form_field_userlimit'] = 'User limit';
 $string['mod_form_field_userlimit_help'] = 'Maximum limit of users allowed in a meeting. If the limit is set to 0 the number of users will be unlimited.';
 $string['mod_form_field_uidlimit'] = 'One user connection limit';
 $string['mod_form_field_uidlimit_help'] = 'The maximum number of connections per account. If the limit is set to 0 the number of users will be unlimited.';
+$string['mod_form_field_durationlimit'] = 'Maximum duration of meetings';
+$string['mod_form_field_durationlimit_help'] = 'The maximum duration of meetings. If the limit is set to 0 the duration will be unlimited.';
 $string['mod_form_field_name'] = 'Virtual classroom name';
 $string['mod_form_field_room_name'] = 'Room name';
 $string['mod_form_field_conference_name'] = 'Conference name';

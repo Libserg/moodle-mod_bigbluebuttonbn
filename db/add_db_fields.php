@@ -99,5 +99,17 @@ try {
 } catch (Exception $e) {
 	echo 'Выброшено исключение: ',  $e->getMessage(), "\n";
 }
+try {
+    if($DB->execute("select durationlimit from {bigbluebuttonbn} where durationlimit is not NULL"))
+	echo "bigbluebuttonbn durationlimit already added!\n";
+} catch (Exception $e) {
+#	echo 'Выброшено исключение: ',  $e->getMessage(), "\n";
+
+	if( $DB->execute("ALTER TABLE {bigbluebuttonbn} ADD COLUMN durationlimit int") && 
+	    $DB->execute("ALTER TABLE {bigbluebuttonbn} ALTER durationlimit SET DEFAULT 0") &&
+	    $DB->execute("UPDATE {bigbluebuttonbn} SET durationlimit=0 WHERE durationlimit is NULL")) {
+	    echo "bigbluebuttonbn durationlimit success added!\n";
+	}
+}
 
 exit(0); // 0 means success.

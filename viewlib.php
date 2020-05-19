@@ -122,6 +122,9 @@ function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
     $output .= $OUTPUT->heading($desc, 5);
 
     $output .= '<p>Запись:'.array('возможна','отключена','включена')[$type].'</p>';
+    if(isset($bbbsession['bigbluebuttonbn']->durationlimit) &&
+	$bbbsession['bigbluebuttonbn']->durationlimit > 0)
+        $output .= '<p>Максимальная продолжительность: '.$bbbsession['bigbluebuttonbn']->durationlimit.' минут</p>';
 
     // Limit check should be the same with bbb_view.php !!!
     $bbb_rc = bbb_server_restrict();
