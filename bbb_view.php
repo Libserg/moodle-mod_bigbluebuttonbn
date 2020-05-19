@@ -396,7 +396,8 @@ function bigbluebuttonbn_bbb_view_create_meeting_data(&$bbbsession) {
     $durationtimelimit_default = intval($CFG->bigbluebuttonbn_durationlimit_default ?? 0);
 
     if (!$durationtimelimit && $durationtimelimit_default > 0)
-	 $durationtimelimit = $durationtimelimit_default;
+	    $durationtimelimit = $durationtimelimit_default;
+
     $durationtime = bigbluebuttonbn_bbb_view_create_meeting_data_duration($bbbsession['bigbluebuttonbn']->closingtime);
     if ($durationtime > 0 || $durationtimelimit > 0) {
 	if($durationtimelimit < $durationtime || !$durationtime) $durationtime = $durationtimelimit;
