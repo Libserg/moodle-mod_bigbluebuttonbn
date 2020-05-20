@@ -97,7 +97,7 @@ function bigbluebuttonbn_view_message_box(&$bbbsession, $message, $type = 'warni
  * @return void
  */
 function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
-    global $OUTPUT, $PAGE, $USER;
+    global $OUTPUT, $PAGE, $USER, $CFG;
     $type = null;
     if (isset($bbbsession['bigbluebuttonbn']->type)) {
         $type = $bbbsession['bigbluebuttonbn']->type;
@@ -121,7 +121,14 @@ function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
         $bbbsession['context']->id, 'mod_bigbluebuttonbn', 'intro', null);
     $output .= $OUTPUT->heading($desc, 5);
 
-    $output .= '<p>Запись:'.array('возможна','отключена','включена')[$type].'</p>';
+    $output .= '<p>'.get_string('meeting_rec_type_'.$type,'bigbluebuttonbn').'</p>';
+    // should be the same with bbb_view.php
+    $duration = $bbbsession['bigbluebuttonbn']->durationlimit ?? 0;
+    if(!$duration)
+	    $duration = $CFG->bigbluebuttonbn_durationlimit_default ?? 0;
+    $duration = intval($duration);
+    if($duration > 0)
+        $output .= '<p>'.get_string('meeting_duration','bigbluebuttonbn',$duration).'</p>';
 
     // Limit check should be the same with bbb_view.php !!!
     $bbb_rc = bbb_server_restrict();

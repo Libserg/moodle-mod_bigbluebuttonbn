@@ -3223,6 +3223,19 @@ function bigbluebuttonbn_settings_uidlimit(&$renderer) {
     }
 }
 
+function bigbluebuttonbn_settings_durationlimit(&$renderer) {
+    if ((boolean) \mod_bigbluebuttonbn\settings\validator::section_duration_limit_shown()) {
+        $renderer->render_group_header('durationlimit');
+        $renderer->render_group_element(
+            'durationlimit_default',
+            $renderer->render_group_element_text('durationlimit_default', 0, PARAM_INT)
+        );
+        $renderer->render_group_element(
+            'durationlimit_editable',
+            $renderer->render_group_element_checkbox('durationlimit_editable', 0)
+        );
+    }
+}
 /**
  * Helper function renders duration settings if the feature is enabled.
  *

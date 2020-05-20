@@ -372,6 +372,7 @@ function bigbluebuttonbn_bbb_view_close_window_manually() {
  * @return object
  */
 function bigbluebuttonbn_bbb_view_create_meeting_data(&$bbbsession) {
+    global $CFG;
     $data = ['meetingID' => $bbbsession['meetingid'],
               'name' => bigbluebuttonbn_html2text($bbbsession['meetingname'], 64),
               'attendeePW' => $bbbsession['viewerPW'],
@@ -390,8 +391,16 @@ function bigbluebuttonbn_bbb_view_create_meeting_data(&$bbbsession) {
 
     $data['welcome'] = trim($bbbsession['welcome']);
     // Set the duration for the meeting.
+    // should be the same with viewlib.php
+    $durationtimelimit = intval($bbbsession['bigbluebuttonbn']->durationlimit ?? 0);
+    $durationtimelimit_default = intval($CFG->bigbluebuttonbn_durationlimit_default ?? 0);
+
+    if (!$durationtimelimit && $durationtimelimit_default > 0)
+	    $durationtimelimit = $durationtimelimit_default;
+
     $durationtime = bigbluebuttonbn_bbb_view_create_meeting_data_duration($bbbsession['bigbluebuttonbn']->closingtime);
-    if ($durationtime > 0) {
+    if ($durationtime > 0 || $durationtimelimit > 0) {
+	if($durationtimelimit < $durationtime || !$durationtime) $durationtime = $durationtimelimit;
         $data['duration'] = $durationtime;
         $data['welcome'] .= '<br><br>';
         $data['welcome'] .= str_replace(

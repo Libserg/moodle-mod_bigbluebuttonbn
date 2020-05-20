@@ -140,6 +140,17 @@ class validator {
     }
 
     /**
+     * Validate if duration limit section will be shown.
+     *
+     * @return boolean
+     */
+    public static function section_duration_limit_shown() {
+        global $CFG;
+        return (!isset($CFG->bigbluebuttonbn['dutationlimit_default']) ||
+                !isset($CFG->bigbluebuttonbn['dutationlimit_editable']));
+    }
+
+    /**
      * Validate if scheduled duration section will be shown.
      *
      * @return boolean
