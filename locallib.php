@@ -33,6 +33,7 @@ defined('MOODLE_INTERNAL') || die;
 global $CFG;
 
 require_once(__DIR__ . '/lib.php');
+require_once($CFG->libdir . '/coursecatlib.php');
 
 const BIGBLUEBUTTONBN_MAX_CONN = 200;
 /** @var BIGBLUEBUTTONBN_UPDATE_CACHE boolean set to true indicates that cache has to be updated */
@@ -3901,3 +3902,115 @@ function bbb_cron() {
 		}
 	}
 }
+
+function bbb_get_cat_list() {
+	global $COURSE;
+	$ret = [];
+	$cci = $COURSE->category;
+	while($cci > 0) {
+		$cc = coursecat::get($cci);
+		$ret[$cc->name] = 1;
+		$cci = $cc->parent;
+	}
+	return $ret;
+}
+function bbb_match_rule($r,&$catlist) {
+	global $COURSE,$SESSION;
+	$bbbs = $SESSION->bigbluebuttonbn_bbbsession ?? [];
+	$res = 0;
+	for($i=0; $i < count($r); $i+=2) {
+		#error_log(" match_rule {$r[$i]} {$r[$i+1]}\n",3,"/tmp/lms-dev.bbb.log");
+		if($r[$i] == 'category') {
+			if(!count($catlist)) $catlist = bbb_get_cat_list();
+			#error_log(" category ".print_r($catlist,1),3,"/tmp/lms-dev.bbb.log");
+			foreach(array_keys($catlist) as $cc) {
+				if(preg_match($r[$i+1],$cc)) {
+					$res |= 1;
+					break;
+				}
+			}
+			if($res) continue;
+			break;
+		}
+		if($r[$i] == 'course') {
+			if(preg_match($r[$i+1],$COURSE->name)) {
+				$res |= 2;
+				continue;
+			}
+			break;
+		}
+		if($r[$i] == 'cidnumber') {
+			if(preg_match($r[$i+1],$COURSE->idnumber)) {
+				$res |= 4;
+				continue;
+			}
+			break;
+		}
+		if($r[$i] == 'mod') {
+			if(isset($bbbs['cm']) && preg_match($r[$i+1],$bbbs['cm']->name)) {
+				$res |= 8;
+				continue;
+			}
+			break;
+		}
+		if($r[$i] == 'midnumber') {
+			if(isset($bbbs['cm']) && preg_match($r[$i+1],$bbbs['cm']->idnumber)) {
+				$res |= 0x10;
+				continue;
+			}
+			break;
+		}
+		if($r[$i] == 'serverurl') {
+			if(isset($bbbs['originServerUrl']) && preg_match($r[$i+1],$bbbs['originServerUrl'])) {
+				$res |= 0x20;
+				continue;
+			}
+			break;
+		}
+		if($r[$i] == 'meetingname') {
+			if(isset($bbbs['meetingname']) && preg_match($r[$i+1],$bbbs['meetingname'])) {
+				$res |= 0x40;
+				continue;
+			}
+			break;
+		}
+		break;
+	}
+	return $res;
+}
+function bbb_override(&$param,$v) {
+	for($i=0; $i < count($v); $i+=2) {
+		if(0 && (!isset($param[$v[$i]]) || $param[$v[$i]] != $v[$i+1]))
+			error_log(" rule override {$v[$i]} = {$v[$i+1]}",0);
+		$param[$v[$i]] = $v[$i+1];
+	}
+}
+
+function bbb_override_param(&$param) {
+	global $CFG,$COURSE,$SESSION;
+	if(!isset($CFG->bigbluebuttonbn_over)) return;
+	if(!is_array($CFG->bigbluebuttonbn_over)) return;
+	#error_log(" cfg ".print_r($CFG->bigbluebuttonbn_over,1),3,"/tmp/lms-dev.bbb.log");
+	#error_log(" param1 ".print_r($param,1),3,"/tmp/lms-dev.bbb.log");
+	#error_log(" session ".print_r($SESSION->bigbluebuttonbn_bbbsession,1),3,"/tmp/lms-dev.bbb.log");
+	$catlist = [];
+	foreach($CFG->bigbluebuttonbn_over as $rule) {
+		if(!isset($rule) || !$rule) continue;
+		if(!isset($rule['cmp']) && !is_array($rule['cmp'])) continue;
+		if(!isset($rule['override']) && !is_array($rule['override'])) continue;
+		$matched = bbb_match_rule($rule['cmp'],$catlist);
+		if($matched > 0) {
+			if(0) {
+			  $am = array('ccat','course','cidnum','mod','midnum','serverurl','meetingname');
+			  $mr = [];
+			  for($i=0; isset($am[$i]);$i++) {
+				if($matched & (1 << $i)) $mr[] = $am[$i];
+			  }
+			  error_log(" rule matched $matched ".implode(',',$mr),0);
+			}
+			bbb_override($param,$rule['override']);
+		}
+	}
+	#error_log(" param2 ".print_r($param,1),3,"/tmp/lms-dev.bbb.log");
+}
+

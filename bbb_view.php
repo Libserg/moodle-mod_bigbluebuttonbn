@@ -420,6 +420,7 @@ function bigbluebuttonbn_bbb_view_create_meeting_data(&$bbbsession) {
     if ($bbbsession['muteonstart']) {
         $data['muteOnStart'] = 'true';
     }
+    bbb_override_param($data);
     return $data;
 }
 
