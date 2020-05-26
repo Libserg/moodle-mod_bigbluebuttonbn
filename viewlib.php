@@ -103,7 +103,6 @@ function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
         $type = $bbbsession['bigbluebuttonbn']->type;
     }
     $typeprofiles = bigbluebuttonbn_get_instance_type_profiles();
-    $enabledfeatures = bigbluebuttonbn_get_enabled_features($typeprofiles, $type);
     $pinginterval = (int)\mod_bigbluebuttonbn\locallib\config::get('waitformoderator_ping_interval') * 1000;
     // JavaScript for locales.
     $PAGE->requires->strings_for_js(array_keys(bigbluebuttonbn_get_strings_for_js()), 'bigbluebuttonbn');
@@ -121,7 +120,24 @@ function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
         $bbbsession['context']->id, 'mod_bigbluebuttonbn', 'intro', null);
     $output .= $OUTPUT->heading($desc, 5);
 
-    $output .= '<p>'.get_string('meeting_rec_type_'.$type,'bigbluebuttonbn').'</p>';
+    $type_r = $type;
+    {
+	$mcdata = [];
+	bbb_override_param($mcdata);
+	if(isset($mcdata['record'])) {
+		$type_r = $mcdata['record'] == 'true' ? 
+			BIGBLUEBUTTONBN_TYPE_RECORDING_ONLY:BIGBLUEBUTTONBN_TYPE_ROOM_ONLY;
+		$type = $type_r;
+	}
+	if( $type_r != BIGBLUEBUTTONBN_TYPE_ALL &&
+	    isset($mcdata['allowStartStopRecording']) &&
+		  $mcdata['allowStartStopRecording'] == 'false')
+		$type_r += 2;
+    }
+
+    $output .= '<p>'.get_string('meeting_rec_type_'.$type_r,'bigbluebuttonbn').'</p>';
+    $enabledfeatures = bigbluebuttonbn_get_enabled_features($typeprofiles, $type);
+
     // should be the same with bbb_view.php
     $duration = $bbbsession['bigbluebuttonbn']->durationlimit ?? 0;
     if(!$duration)

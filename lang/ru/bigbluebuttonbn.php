@@ -14,4 +14,6 @@ $string['meeting_duration'] = 'Максимальная продолжитель
 $string['meeting_rec_type_0'] = 'Запись может быть сделана';
 $string['meeting_rec_type_1'] = 'Без записи';
 $string['meeting_rec_type_2'] = 'Запись включена';
+$string['meeting_rec_type_3'] = 'Без записи (принудительно)';
+$string['meeting_rec_type_4'] = 'Запись включена (принудительно)';
 

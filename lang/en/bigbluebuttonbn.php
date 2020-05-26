@@ -534,4 +534,6 @@ $string['meeting_duration'] = 'Maximum duration of meeting is {$a} minutes';
 $string['meeting_rec_type_0'] = 'Recording is possible';
 $string['meeting_rec_type_1'] = 'Without recording';
 $string['meeting_rec_type_2'] = 'Recording Enabled';
+$string['meeting_rec_type_3'] = 'Without recording (override)';
+$string['meeting_rec_type_4'] = 'Recording Enabled (override)';
 
