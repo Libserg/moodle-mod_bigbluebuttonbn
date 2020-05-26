@@ -3919,10 +3919,10 @@ function bbb_match_rule($r,&$catlist) {
 	$bbbs = $SESSION->bigbluebuttonbn_bbbsession ?? [];
 	$res = 0;
 	for($i=0; $i < count($r); $i+=2) {
-		#error_log(" match_rule {$r[$i]} {$r[$i+1]}\n",3,"/tmp/lms-dev.bbb.log");
+		#error_log(" match_rule $i {$r[$i+1]} $res",0);
 		if($r[$i] == 'category') {
 			if(!count($catlist)) $catlist = bbb_get_cat_list();
-			#error_log(" category ".print_r($catlist,1),3,"/tmp/lms-dev.bbb.log");
+			#error_log(" match_rule cat '".implode(':',array_keys($catlist))."'",0);
 			foreach(array_keys($catlist) as $cc) {
 				if(preg_match($r[$i+1],$cc)) {
 					$res |= 1;
@@ -3933,13 +3933,15 @@ function bbb_match_rule($r,&$catlist) {
 			break;
 		}
 		if($r[$i] == 'course') {
-			if(preg_match($r[$i+1],$COURSE->name)) {
+			#error_log(" match_rule course '{$COURSE->fullname}'",0);
+			if(preg_match($r[$i+1],$COURSE->fullname)) {
 				$res |= 2;
 				continue;
 			}
 			break;
 		}
 		if($r[$i] == 'cidnumber') {
+			#error_log(" match_rule cidnumber '{$COURSE->idnumber}'",0);
 			if(preg_match($r[$i+1],$COURSE->idnumber)) {
 				$res |= 4;
 				continue;
@@ -3947,6 +3949,7 @@ function bbb_match_rule($r,&$catlist) {
 			break;
 		}
 		if($r[$i] == 'mod') {
+			#error_log(" match_rule mod '{$bbbs['cm']->name}'",0);
 			if(isset($bbbs['cm']) && preg_match($r[$i+1],$bbbs['cm']->name)) {
 				$res |= 8;
 				continue;
@@ -3954,6 +3957,7 @@ function bbb_match_rule($r,&$catlist) {
 			break;
 		}
 		if($r[$i] == 'midnumber') {
+			#error_log(" match_rule midnum '{$bbbs['cm']->idnumber}'",0);
 			if(isset($bbbs['cm']) && preg_match($r[$i+1],$bbbs['cm']->idnumber)) {
 				$res |= 0x10;
 				continue;
@@ -3961,6 +3965,7 @@ function bbb_match_rule($r,&$catlist) {
 			break;
 		}
 		if($r[$i] == 'serverurl') {
+			#error_log(" match_rule serverurl '{$bbbs['originServerUrl']}'",0);
 			if(isset($bbbs['originServerUrl']) && preg_match($r[$i+1],$bbbs['originServerUrl'])) {
 				$res |= 0x20;
 				continue;
@@ -3968,14 +3973,18 @@ function bbb_match_rule($r,&$catlist) {
 			break;
 		}
 		if($r[$i] == 'meetingname') {
+			#error_log(" match_rule meetingname '{$bbbs['meetingname']}'",0);
 			if(isset($bbbs['meetingname']) && preg_match($r[$i+1],$bbbs['meetingname'])) {
 				$res |= 0x40;
 				continue;
 			}
 			break;
 		}
+		error_log(" match_rule unknown '{$r[$i]}'",0);
 		break;
 	}
+	if($i < count($r)) $res = 0;
+	#error_log(" match_rule result $i $res",0);
 	return $res;
 }
 function bbb_override(&$param,$v) {
