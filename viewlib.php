@@ -126,13 +126,13 @@ function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
 	bbb_override_param($mcdata);
 	if(isset($mcdata['record'])) {
 		$type_r = $mcdata['record'] == 'true' ? 
-			BIGBLUEBUTTONBN_TYPE_RECORDING_ONLY:BIGBLUEBUTTONBN_TYPE_ROOM_ONLY;
+			BIGBLUEBUTTONBN_TYPE_ALL:BIGBLUEBUTTONBN_TYPE_ROOM_ONLY;
 		$type = $type_r;
 	}
-	if( $type_r != BIGBLUEBUTTONBN_TYPE_ALL &&
+	if( $type_r != BIGBLUEBUTTONBN_TYPE_RECORDING_ONLY &&
 	    isset($mcdata['allowStartStopRecording']) &&
 		  $mcdata['allowStartStopRecording'] == 'false')
-		$type_r += 2;
+		$type_r = 4-$type_r;
     }
 
     $output .= '<p>'.get_string('meeting_rec_type_'.$type_r,'bigbluebuttonbn').'</p>';
