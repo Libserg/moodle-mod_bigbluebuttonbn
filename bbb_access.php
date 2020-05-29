@@ -54,7 +54,7 @@ function check_moodle_session($sid) {
 			$sdata = session_decode(file_get_contents($sfile,0));
 			if ($sdata !== false &&
 				$_SESSION['USER']->lastaccess > $ctm-3*3600) {
-			    error_log("check_moodle_session OK ".$_SESSION['USER']->lastaccess."\n",0);
+			    #error_log("check_moodle_session OK ".$_SESSION['USER']->lastaccess."\n",0);
 			    return 1;
 			}
 			error_log("check_moodle_session too old ".($ctm - $_SESSION['USER']->lastaccess)."\n",0);
