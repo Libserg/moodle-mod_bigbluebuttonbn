@@ -262,6 +262,7 @@ function bbb_get_server_info_real($n) {
 
 	   }
 	}
+	$trc += $m_count*10;
 	#error_log("BBB_Get_Info ($n) MC=$m_count LC=$m_list LM=$m_list_max VC=$m_video VM=$m_video_max\n",0);
 	return array(0=>1,'time'=>time(), 'info'=>$m_info, 'RC'=>$trc, 'MC'=>$m_count, 'LC'=>$m_list, 
 		     'LM'=>$m_list_max, 'VC'=>$m_video, 'VM'=>$m_video_max);
