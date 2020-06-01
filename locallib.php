@@ -3902,6 +3902,12 @@ function bbb_cron() {
 			echo "Delete old cache $v\n";
 		}
 	}
+	foreach(glob($cachedir.'/sid_*') as $rid => $v) {
+		if(filemtime($v) < $ctm - 3*3600) {
+			unlink($v);
+			echo "Delete old cache $v\n";
+		}
+	}
 }
 
 function bbb_get_cat_list() {
