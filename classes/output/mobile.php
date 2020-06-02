@@ -109,6 +109,19 @@ class mobile {
             $message = get_string('view_message_conference_has_ended', 'bigbluebuttonbn');
             return(self::mobile_print_notification($bigbluebuttonbn, $cm, $message));
         }
+        if($bbbsession['server'] == 0) {
+                $server = bbb_get_meeting_server($bbbsession['meetingid']);
+                if($server) {
+                        $bbbsession['server'] = $server;
+                        bbb_set_meeting_server($bbbsession['meetingid'],$server,0);
+                        $bigbluebuttonbn->server = $server;
+                } else {
+                        error_log("BBB no server for {$bbbsession['meetingid']} ",0);
+            		$message = get_string('view_message_conference_not_started', 'bigbluebuttonbn');
+	 	        return(self::mobile_print_notification($bigbluebuttonbn, $cm, $message));
+                        exit;
+                }
+        }
 
         // Check if the BBB server is working.
         $serverversion = bigbluebuttonbn_get_server_version($bigbluebuttonbn->server);

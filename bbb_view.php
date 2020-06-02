@@ -65,6 +65,18 @@ if ($timeline || $index) {
     $bbbsession['bigbluebuttonbn'] = $bigbluebuttonbn;
     bigbluebuttonbn_view_bbbsession_set($context, $bbbsession);
 
+    if($bbbsession['server'] == 0) {
+		$server = bbb_get_meeting_server($bbbsession['meetingid']);
+		if($server) {
+			$bbbsession['server'] = $server;
+			bbb_set_meeting_server($bbbsession['meetingid'],$server,0);
+			$bigbluebuttonbn->server = $server;
+		} else {
+			error_log("BBB no server for {$bbbsession['meetingid']} ",0);
+			exit;
+		}
+    }
+
     // Validates if the BigBlueButton server is working.
     $serverversion = bigbluebuttonbn_get_server_version($bigbluebuttonbn->server);
     if (is_null($serverversion)) {
