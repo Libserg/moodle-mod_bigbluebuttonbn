@@ -126,7 +126,7 @@ function check_moodle_session($sid) {
 			$msg = " SID bad";
 		}
 	} else {
-		$msg = " RID old ".($ctm - $info[$sid]);
+		$msg = " RID old ".(isset($info[$sid]) ? $ctm - $info[$sid]:'');
 	}
     } while(false);
     if(!$ret)
