@@ -353,25 +353,54 @@ function bbb_get_meeting_server($meetingid) {
 	global $DB;
 	$cache = bbb_get_meeting_server_cache();
 	$server = $cache->get($meetingid);
-	if($server !== false) {
-		if($server[0] > time() - 10)
+	if($server !== false && is_array($server)) {
+		if(bigbluebuttonbn_is_meeting_running($meetingid,BIGBLUEBUTTONBN_UPDATE_CACHE,$server[1])) {
+			$cache->set($meetingid,[time(),$server[1]]);
 			return $server[1];
+		}
 	}
-
-	$sql = "select id,server,timecreated from {bigbluebuttonbn_logs} where meetingid=? ";
-	$sql .= ' AND log = ? AND meta LIKE ? order by timecreated desc limit 1';
-	$server_list = $DB->get_records_sql($sql,
-		array($meetingid,BIGBLUEBUTTONBN_LOG_EVENT_CREATE,'%"record":true%'));
-
-	foreach($server_list as $s) {
-		$server = $s->server;
-		#error_log("bbb_get_meeting_server DB server: $server for $meetingid",0);
-		$cache->set($meetingid,[time(),$server]);
-		break;
+	// check all servers
+	$server_list = bbb_server_restrict();
+	$servers = [];
+	foreach($server_list as $server=>$s) {
+		if(!intval($server)) continue;
+		if(!bbb_server_healt($server)) continue;
+		if(bigbluebuttonbn_is_meeting_running($meetingid,BIGBLUEBUTTONBN_UPDATE_CACHE,$server)) {
+			$servers[] = $server;
+		}
 	}
-#	if(!$server) error_log("bbb_get_meeting_server NOTFOUND server for $meetingid",0);
-	return $server;
+	if(count($servers) > 1)
+		error_log("get_meeting_server BUG $meetingid servers '".implode(',',$servers)."'",0);
+	if(count($servers) > 0) {
+		$cache->set($meetingid,[time(),$servers[0]]);
+#		error_log("get_meeting_server LOST INFO {$servers[0]} $meetingid \n".
+#	                        format_backtrace(debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT),1),0);
+		return $servers[0];
+	}
+#	error_log("get_meeting_server $meetingid NO\n",0);
+	return false;
 }
+
+#function bbb_get_meeting_server_log($meetingid) {
+#	global $DB;
+#
+#	$server = bbb_get_meeting_server($meetingid);
+#	if($server !== false) return $server;
+#
+#	$sql = "select id,server,timecreated from {bigbluebuttonbn_logs} where meetingid=? ";
+#	$sql .= ' AND log = ? AND meta LIKE ? order by timecreated desc limit 1';
+#	$server_list = $DB->get_records_sql($sql,
+#		array($meetingid,BIGBLUEBUTTONBN_LOG_EVENT_CREATE,'%"record":true%'));
+#
+#	foreach($server_list as $s) {
+#		$server = $s->server;
+#		#error_log("bbb get_meeting_server DB server: $server for $meetingid",0);
+#		break;
+#	}
+##	if(!$server) error_log("bbb get_meeting_server NOTFOUND server for $meetingid",0);
+#
+#	return $server;
+#}
 
 /**
  * Creates a bigbluebutton meeting and returns the response in an array.
@@ -3553,7 +3582,7 @@ function bigbluebuttonbn_user_can_join_meeting($bigbluebuttonbn, $mid = null, $u
         $mid = $bigbluebuttonbn->meetingid . '-' . $bigbluebuttonbn->course . '-' . $bigbluebuttonbn->id;
     }
     // When meeting is running, all authorized users can join right in.
-    if (bigbluebuttonbn_is_meeting_running($mid,false,$bigbluebuttonbn->server)) {
+    if (bigbluebuttonbn_is_meeting_running($mid,BIGBLUEBUTTONBN_UPDATE_CACHE,$bigbluebuttonbn->server)) {
         return array(true, get_string('view_message_conference_in_progress', 'bigbluebuttonbn'));
     }
     // When meeting is not running, see if the user can join.
@@ -3827,7 +3856,7 @@ function bigbluebuttonbn_create_meeting_metadata(&$bbbsession) {
 
 function bbb_server_restrict() {
     global $DB,$CFG;
-#    if(isset($CFG->bbb_server_rc)) return $CFG->bbb_server_rc;
+    if(isset($CFG->bbb_server_rc)) return $CFG->bbb_server_rc;
     $rc = $DB->get_records('config_plugins',array('plugin'=>'local_bbbadm'),'name','name,value');
     if(!$rc) return false;
     $slist = \mod_bigbluebuttonbn\locallib\config::server_list();

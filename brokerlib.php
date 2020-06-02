@@ -39,9 +39,12 @@ defined('MOODLE_INTERNAL') || die();
 function bigbluebuttonbn_broker_meeting_info($bbbsession, $params, $updatecache) {
     $callbackresponse = array();
     $running = false;
-// FIXME server 0
     if($bbbsession['server'] == 0) {
-	$server = bbb_select_server();
+	$server = bbb_get_meeting_server($bbbsession['meetingid']);
+	if(!$server) {
+		$server = bbb_select_server();
+		#if($server > 0) error_log("broker select server '$server'",0);
+	} # else error_log("broker get_meeting_info server '$server'",0);
 	if(!$server) {
 	    $callbackresponse['info'] = array('running'=>'false');
     	    $callbackresponse['status'] = array('can_join'=>0,'message'=>'No servers','can_end'=>false);
@@ -56,7 +59,7 @@ function bigbluebuttonbn_broker_meeting_info($bbbsession, $params, $updatecache)
 #    error_log("bigbluebuttonbn_get_meeting_info ".print_r($info,1),0);
     $callbackresponse['info'] = $info;
     if ($info['returncode'] == 'SUCCESS') {
-        $running = ($info['running'] === 'true');
+        $running = true; # ($info['running'] === 'true');
     }
     $callbackresponse['running'] = $running;
     $status = array();

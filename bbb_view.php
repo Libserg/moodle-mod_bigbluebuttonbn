@@ -159,10 +159,8 @@ switch (strtolower($action)) {
 		$server = bbb_get_meeting_server($bbbsession['meetingid']);
 		if($server) {
 			$bbbsession['server'] = $server;
-			bbb_set_meeting_server($bbbsession['meetingid'],$server,0);
-		}
-		else 
-			error_log("Logout BBB no server for {$bbbsession['meetingid']} ",0);
+			# bbb_set_meeting_server($bbbsession['meetingid'],$server,0);
+		} else error_log("Logout BBB no server for {$bbbsession['meetingid']} ",0);
 	}
 	if($bbbsession['server'] > 0)
              $meetinginfo = bigbluebuttonbn_get_meeting_info($bbbsession['meetingid'], BIGBLUEBUTTONBN_UPDATE_CACHE,$bbbsession['server']);
@@ -200,7 +198,8 @@ switch (strtolower($action)) {
 
 	if($bbbsession['server'] == 0) {
 	    $srv_last = bbb_get_meeting_server($bbbsession['meetingid']);
-	    if($srv_last && bigbluebuttonbn_is_meeting_running($bbbsession['meetingid'],false,$srv_last)) {
+	    if($srv_last && bigbluebuttonbn_is_meeting_running($bbbsession['meetingid'],
+								BIGBLUEBUTTONBN_UPDATE_CACHE,$srv_last)) {
 	        $bbbsession['server'] = $srv_last;
 	        $bigbluebuttonbn->server = $srv_last;
 	    }
@@ -235,7 +234,8 @@ switch (strtolower($action)) {
 	    break;
 	}
         // See if the session is in progress.
-        if (bigbluebuttonbn_is_meeting_running($bbbsession['meetingid'],false,$server)) {
+	if (bigbluebuttonbn_is_meeting_running($bbbsession['meetingid'],
+						BIGBLUEBUTTONBN_UPDATE_CACHE,$server)) {
             // Since the meeting is already running, we just join the session.
 	    $ucount = bigbluebuttonbn_get_userid_connect($bbbsession);
 	    if(isset($bbbsession['uidlimit']) && $ucount >= $bbbsession['uidlimit']) {
