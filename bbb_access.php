@@ -110,7 +110,7 @@ function check_moodle_session($sid) {
 		break;
 	}
 	$info = unserialize($data);
-	if(is_array($info) && isset($info[$sid]) && $info[$sid] > $ctm - 5*60) {
+	if(is_array($info) && isset($info[$sid]) && $info[$sid] > $ctm - 2*60*60) {
 		$sfile = $cachedir .'/sid_'. $sid;
 		if(file_exists($sfile) && filemtime($sfile) > $ctm - 1*60) {
 			$ret = true;
@@ -126,7 +126,7 @@ function check_moodle_session($sid) {
 			$msg = " SID bad";
 		}
 	} else {
-		$msg = " RID old";
+		$msg = " RID old ".($ctm - $info[$sid]);
 	}
     } while(false);
     if(!$ret)
