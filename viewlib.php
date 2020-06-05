@@ -121,9 +121,10 @@ function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
     $output .= $OUTPUT->heading($desc, 5);
 
     $type_r = $type;
+    $no_show_rec_stud = false;
     {
 	$mcdata = [];
-	bbb_override_param($mcdata);
+	bbb_override_param($mcdata,false);
 	if(isset($mcdata['record'])) {
 		$type_r = $mcdata['record'] == 'true' ? 
 			BIGBLUEBUTTONBN_TYPE_ALL:BIGBLUEBUTTONBN_TYPE_ROOM_ONLY;
@@ -132,12 +133,15 @@ function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
 	if( $type_r != BIGBLUEBUTTONBN_TYPE_RECORDING_ONLY &&
 	    isset($mcdata['allowStartStopRecording']) &&
 		  $mcdata['allowStartStopRecording'] == 'false')
-		$type_r = 4-$type_r;
+		  $type_r = 4-$type_r;
+	if(isset($mcdata['moodle.noshowrec']) && $mcdata['moodle.noshowrec'] == 'true')
+	    	$no_show_rec_stud = true;
     }
 
     $output .= '<p>'.get_string('meeting_rec_type_'.$type_r,'bigbluebuttonbn').'</p>';
     $enabledfeatures = bigbluebuttonbn_get_enabled_features($typeprofiles, $type);
-
+    if($no_show_rec_stud && !$bbbsession['administrator'] && !$bbbsession['moderator'])
+	    $enabledfeatures['showrecordings'] = false;
     // should be the same with bbb_view.php
     $duration = $bbbsession['bigbluebuttonbn']->durationlimit ?? 0;
     if(!$duration)

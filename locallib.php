@@ -4023,15 +4023,16 @@ function bbb_match_rule($r,&$catlist) {
 	#error_log(" match_rule result $i $res",0);
 	return $res;
 }
-function bbb_override(&$param,$v) {
+function bbb_override(&$param,$v,$filter) {
 	for($i=0; $i < count($v); $i+=2) {
+		if($filter && strpos($v[$i],'moodle.') !== false) continue;
+		$param[$v[$i]] = $v[$i+1];
 		if(0 && (!isset($param[$v[$i]]) || $param[$v[$i]] != $v[$i+1]))
 			error_log(" rule override {$v[$i]} = {$v[$i+1]}",0);
-		$param[$v[$i]] = $v[$i+1];
 	}
 }
 
-function bbb_override_param(&$param) {
+function bbb_override_param(&$param,$filter = false) {
 	global $CFG,$COURSE,$SESSION;
 	if(!isset($CFG->bigbluebuttonbn_over)) return;
 	if(!is_array($CFG->bigbluebuttonbn_over)) return;
@@ -4053,7 +4054,7 @@ function bbb_override_param(&$param) {
 			  }
 			  error_log(" rule matched $matched ".implode(',',$mr),0);
 			}
-			bbb_override($param,$rule['override']);
+			bbb_override($param,$rule['override'],$filter);
 		}
 	}
 	#error_log(" param2 ".print_r($param,1),3,"/tmp/lms-dev.bbb.log");
