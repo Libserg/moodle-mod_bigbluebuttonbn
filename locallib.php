@@ -3925,17 +3925,45 @@ function bbb_cron() {
 	global $CFG;
 	$cachedir = bbb_server_cache_dir();
 	$ctm = time();
-	foreach(glob($cachedir.'/*-*') as $rid => $v) {
+	if(!file_exists($cachedir.'/.last_gc') ||
+		filemtime($cachedir.'/.last_gc') < $ctm - 3600) {
+	    foreach(glob($cachedir.'/*-*') as $rid => $v) {
 		if(filemtime($v) < $ctm - 3*3600) {
 			unlink($v);
 			echo "Delete old cache $v\n";
 		}
+	    }
+	    foreach(glob($cachedir.'/sid_*') as $rid => $v) {
+		if(filemtime($v) < $ctm - 3*3600) {
+			unlink($v);
+			echo "Delete old cache $v\n";
+		}
+	    }
+	    file_put_contents($cachedir.'/.last_gc',$ctm);
 	}
-	foreach(glob($cachedir.'/sid_*') as $rid => $v) {
-		if(filemtime($v) < $ctm - 3*3600) {
-			unlink($v);
-			echo "Delete old cache $v\n";
+	if(!($CFG->bbb_rrd ?? 0)) return 0;
+	$server_list = bbb_server_restrict();
+	$load = [];
+	$min_rc = false;
+	$s_rc = false;
+	foreach($server_list as $k=>$s) {
+		if(!$k) continue;
+		$load[$k] = bbb_get_server_info($k);
+		if(!$load[$k][0]) continue;
+		$rrdfile = $cachedir."/server_$k.rrd";
+		if(!file_exists($rrdfile)) {
+			shell_exec("rrdtool create {$rrdfile} -s 120 DS:RC:GAUGE:360:0:1000 ".
+				"DS:MC:GAUGE:360:0:1000 ".
+				"DS:LC:GAUGE:360:0:1000 ".
+				"DS:LM:GAUGE:360:0:1000 ".
+				"DS:VC:GAUGE:360:0:1000 ".
+				"DS:VM:GAUGE:360:0:1000 ".
+				"RRA:AVERAGE:0.5:1:720 ".
+				"RRA:AVERAGE:0.5:12:420");
 		}
+		if(!file_exists($rrdfile)) continue;
+		shell_exec("rrdtool update {$rrdfile} N:{$load[$k]['RC']}:{$load[$k]['MC']}:".
+			"{$load[$k]['LC']}:{$load[$k]['LM']}:{$load[$k]['VC']}:{$load[$k]['VM']}");
 	}
 }
 
