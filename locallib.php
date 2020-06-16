@@ -310,6 +310,37 @@ function bbb_select_server() {
 	return $s_rc;
 }
 
+function bbb_select_server_select_sort($a,$b) {
+    $va = intval($a[1]) ?? 0;
+    $vb = intval($b[1]) ?? 0;
+    if($va != $vb) return $va - $vb;
+    return strcmp($a[2],$b[2]);
+}
+
+function bbb_select_server_select() {
+	$server_list = bbb_server_restrict();
+	$ret = [0=>'Any'];
+	$order = [];
+	$min_rc = false;
+	$s_rc = false;
+	foreach($server_list as $k=>$s) {
+		if(!$k) continue;
+		$order[$k] = [$k,$s['show_order'] ?? 0,$s['server_name']];
+	}
+	uasort($order,'bbb_select_server_select_sort');
+	foreach($order as $sr) {
+		$k = $sr[0];
+		if(!$k) continue;
+		$s = $server_list[$k];
+		if(isset($s['denybbbserver']) && $s['denybbbserver'])
+			continue;
+		if(!bbb_server_healt($k)) continue;
+		$ret[$k] = $s['server_name'];
+	}
+	return $ret;
+}
+
+
 function bbb_get_meeting_server_cache() {
 	$cache = cache::make_from_params( cache_store::MODE_APPLICATION, 'mod_bigbluebuttonbn',
 					  'meeting_server');

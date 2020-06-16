@@ -46,15 +46,14 @@ class mod_bigbluebuttonbn_mod_form extends moodleform_mod {
         global $CFG, $DB, $OUTPUT, $PAGE;
         $mform = &$this->_form;
 
-if(0) {
         // Validates if the BigBlueButton server is running.
-        $serverversion = bigbluebuttonbn_get_server_version();
-        if (is_null($serverversion)) {
+	$bbbsrv = bbb_select_server_select();
+        if ($bbbsrv === false) {
             print_error('general_error_unable_connect', 'bigbluebuttonbn',
                 $CFG->wwwroot.'/admin/settings.php?section=modsettingbigbluebuttonbn');
             return;
 	}
-}
+
         // Context.
         $bigbluebuttonbn = null;
         $course = get_course($this->current->course);
@@ -79,7 +78,7 @@ if(0) {
             return;
         }
         $this->bigbluebuttonbn_mform_add_block_profiles($mform, $jsvars['instanceTypeProfiles']);
-        $this->bigbluebuttonbn_mform_add_block_server($mform, $bigbluebuttonbn);
+        $this->bigbluebuttonbn_mform_add_block_server($mform, $bbbsrv, $bigbluebuttonbn);
         // Data for participant selection.
         $participantlist = bigbluebuttonbn_get_participant_list($bigbluebuttonbn, $context);
         // Add block 'General'.
@@ -151,6 +150,7 @@ if(0) {
      * @return void
      */
     public function validation($data, $files) {
+	global $USER,$DB,$CFG;
         $errors = parent::validation($data, $files);
         if (isset($data['openingtime']) && isset($data['closingtime'])) {
             if ($data['openingtime'] != 0 && $data['closingtime'] != 0 &&
@@ -175,10 +175,17 @@ if(0) {
                 intval($data['durationlimit']) > intval($cfg['durationlimit_default'])) {
                 $errors['durationlimit'] = "We have a limit {$cfg['durationlimit_default']} minutes for duration of meeting.";
             }
+	}
+	if(!isset($data['server'])) $data['server'] = 0;
+	$bbb_rec = $DB->get_record('bigbluebuttonbn',
+			['id'=>$data['instance'], 'course'=>$data['course']]);
+	$old_server = is_object($bbb_rec) && intval($bbb_rec->server) ?? 0;
+
+	if(intval($data['server']) != $old_server) {
+	    if(isset($CFG->adminselectserver) && !is_siteadmin() && !has_capability('moodle/site:config', context_user::instance($USER->id))) {
+		$errors['server'] = 'Server selection is allowed only to site administrators';
+	    }
         }
-#        if (!isset($data['server']) || !intval($data['server']) ) {
-#                $errors['server'] = 'Server not selected.';
-#        }
         return $errors;
     }
 
@@ -274,17 +281,27 @@ if(0) {
             $mform->addHelpButton('type', 'mod_form_field_instanceprofiles', 'bigbluebuttonbn');
 	}
     }
-    private function bigbluebuttonbn_mform_add_block_server(&$mform, $modbbb) {
-	$bbbsrv = \mod_bigbluebuttonbn\locallib\config::select_server();
-	if($bbbsrv !== false) {
-            $mform->addElement('select', 'server', 'server',$bbbsrv);
-	    $mform->addHelpButton('server', 'server', 'bigbluebuttonbn');
-	    $mform->setType('server', PARAM_INT);
-	    $mform->addRule('server', 'Must be selected', 'required',null,'client');
-	} else {
-            $mform->addElement('hidden', 'server', 1);
-	    $mform->setType('server', PARAM_INT);
-	}
+
+    /**
+     * Function for showing the block for selecting servers.
+     *
+     * @param object $mform
+     * @param array $server_list
+     * @param array $bigbluebuttonbn config
+     * @return void
+     */
+    private function bigbluebuttonbn_mform_add_block_server(&$mform, $bbbsrv,$bbbopt) {
+        global $USER,$CFG;
+        $is_admin = !isset($CFG->adminselectserver) || is_siteadmin() ||
+		     has_capability('moodle/site:config', context_user::instance($USER->id));
+
+        $mform->addElement('select', 'server', 'server',$bbbsrv);
+	$mform->addHelpButton('server', 'server', 'bigbluebuttonbn');
+	$mform->setType('server', PARAM_INT);
+	if(!isset($bbbopt->server))
+		$mform->setDefault('server',0);
+	if(!$is_admin)
+		$mform->disabledIf('server', 'type', 'ne', 999);
     }
 
     /**
