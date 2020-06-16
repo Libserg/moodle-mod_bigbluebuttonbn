@@ -182,6 +182,7 @@ function bigbluebuttonbn_view_render(&$bbbsession, $activity) {
 		 $restricted = 'No servers available';
 	}
     }
+    $ucount = 0;
     $rserver = $bbbsession['server'];
     if(!$rserver)
 	    $rserver = bbb_get_meeting_server($bbbsession['meetingid']);
