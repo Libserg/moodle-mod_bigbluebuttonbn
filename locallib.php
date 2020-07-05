@@ -360,24 +360,14 @@ function bbb_set_meeting_server($meetingid,$server,$state=0) {
 	}
 }
 
-function bbb_access_recording_update($recordingID) {
+function bbb_access_recording_update($recordingID,$server) {
 	global $CFG;
-	$cachedir = bbb_server_cache_dir();
-	if(!is_array($recordingID) || !count($recordingID)) return;
-	$ctm = time();
-	foreach($recordingID as $rid => $v) {
-		$rfile = $cachedir .'/'. $rid;
-		$data = file_exists($rfile) ? file_get_contents($rfile,0): false;
-		if($data !== false) {
-			$info = unserialize($data);
-			foreach($info as $sid=>$tv) {
-				if($tv < $ctm - 5*60) unset($info[$sid]);
-			}
-		} else
-			$info = array();
-		$info[session_id()] = $ctm;
-		file_put_contents($rfile,serialize($info));
-	}
+	$ckname = 'MoodleSession'.($CFG->sessioncookie ?? '');
+	if(!isset($_COOKIE[$ckname])) return;
+	$ca = $_COOKIE[$ckname];
+	$srvurl = \mod_bigbluebuttonbn\locallib\bigbluebutton::root($server).'add_access';
+	$res = bigbluebuttonbn_wrap_xml_load_file_curl_request($srvurl, 'POST', 
+		json_encode(array('rid'=>array_keys($recordingID),'sid'=>$ca)),'application/x-www-form-urlencoded');
 }
 
 function bbb_get_meeting_server($meetingid) {
@@ -612,7 +602,7 @@ function bigbluebuttonbn_get_recordings_array_fetch_page($mids, $server) {
                 }
             }
         }
-	bbb_access_recording_update($recID);
+	bbb_access_recording_update($recID,$server);
     }
     return $recordings;
 }
