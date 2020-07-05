@@ -33,7 +33,7 @@ defined('MOODLE_INTERNAL') || die;
 global $CFG;
 
 require_once(__DIR__ . '/lib.php');
-require_once($CFG->libdir . '/coursecatlib.php');
+#require_once($CFG->libdir . '/coursecatlib.php');
 
 const BIGBLUEBUTTONBN_MAX_CONN = 200;
 /** @var BIGBLUEBUTTONBN_UPDATE_CACHE boolean set to true indicates that cache has to be updated */
@@ -3946,22 +3946,6 @@ function bbb_cron() {
 	global $CFG;
 	$cachedir = bbb_server_cache_dir();
 	$ctm = time();
-	if(!file_exists($cachedir.'/.last_gc') ||
-		filemtime($cachedir.'/.last_gc') < $ctm - 3600) {
-	    foreach(glob($cachedir.'/*-*') as $rid => $v) {
-		if(filemtime($v) < $ctm - 3*3600) {
-			unlink($v);
-			echo "Delete old cache $v\n";
-		}
-	    }
-	    foreach(glob($cachedir.'/sid_*') as $rid => $v) {
-		if(filemtime($v) < $ctm - 3*3600) {
-			unlink($v);
-			echo "Delete old cache $v\n";
-		}
-	    }
-	    file_put_contents($cachedir.'/.last_gc',$ctm);
-	}
 	if(!($CFG->bbb_rrd ?? 0)) return 0;
 	$server_list = bbb_server_restrict();
 	$load = [];
