@@ -98,8 +98,12 @@ global $strpar,$server;
     }
     if(count($ret)) {
         foreach($strpar as $k=>$v) {
-          if(!isset($ret[$v])) $ret[$v] = 0;
+            if(!isset($ret[$v])) $ret[$v] = 0;
         }
+        $maxtime = 3*3600;
+        if($ret['tcdesk_len'] > $maxtime) $ret['tcdesk_len'] = $maxtime;
+        if($ret['voice_len'] > $maxtime) $ret['voice_len'] = $maxtime;
+        if($ret['rtc_len'] > $maxtime) $ret['rtc_len'] = $maxtime;
         $ret['server'] = 1;
         $ret['meetingid'] = $eid;
         $ret['starttime'] = intval($ret['starttime']);
