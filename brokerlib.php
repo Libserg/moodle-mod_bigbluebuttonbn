@@ -254,7 +254,7 @@ function bigbluebuttonbn_broker_recording_play($params) {
     global $DB;
     $callbackresponse = array('status' => true, 'found' => false);
 
-    $sql = "select bl.server from {bigbluebuttonbn_logs} as bl ";
+    $sql = "select bl.id,bl.server from {bigbluebuttonbn_logs} as bl ";
     $sql .= " inner join {bigbluebuttonbn} as b on b.id=bl.bigbluebuttonbnid where bl.meetingid = ? ";
     $sql .= ' AND log = ? AND meta = ?';
     $rinfo = $DB->get_records_sql($sql, array($params['idx'],BIGBLUEBUTTONBN_LOG_EVENT_CREATE, '{"record":true}'));
