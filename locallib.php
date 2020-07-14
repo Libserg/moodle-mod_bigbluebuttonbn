@@ -33,7 +33,8 @@ defined('MOODLE_INTERNAL') || die;
 global $CFG;
 
 require_once(__DIR__ . '/lib.php');
-#require_once($CFG->libdir . '/coursecatlib.php');
+# coursecatlib.php not needed for 3.8
+require_once($CFG->libdir . '/coursecatlib.php');
 
 const BIGBLUEBUTTONBN_MAX_CONN = 200;
 /** @var BIGBLUEBUTTONBN_UPDATE_CACHE boolean set to true indicates that cache has to be updated */
@@ -282,6 +283,10 @@ function bbb_get_server_info($n) {
 		}
 	}
 	$info = bbb_get_server_info_real($n);
+	if(file_exists($cachedir.'/timelen_'.$n)) {
+		$data = intval(file_get_contents($cachedir.'/timelen_'.$n,0));
+		$info['reclen'] = $data;
+	}
 	if($info[0]) {
 		file_put_contents($cachefile,serialize($info));
 	}
@@ -566,11 +571,28 @@ function bigbluebuttonbn_get_recordings_array_fetch($meetingidsarray, $server) {
  */
 function bigbluebuttonbn_get_recordings_array_fetch_page($mids, $server) {
     $recordings = array();
+    $missing_rid = array();
 
     if($server === false || !$server)
 	    throw new \Exception('bigbluebuttonbn_get_recordings_array_fetch_page server missing');
+    $tm1 = time();
+    $cache = cache::make_from_params(cache_store::MODE_APPLICATION, 'mod_bigbluebuttonbn', 'records_cache');
+    foreach($mids as $mid) {
+	$result = $cache->get($server.'_'.$mid);
+	if($result === false || ( isset($result['lastupdate']) && $result['lastupdate'] < $tm1 - 3*60)) {
+	    $missing_rid[] = $mid;
+	} else {
+		foreach($result as $m => $r) {
+		    if($m == 'lastupdate') continue;
+		    if(!isset($r['recordID'])) continue;
+		    $recordings[$r['recordID']] = $r;
+		}
+	}
+    }
+    if(!count($missing_rid)) return $recordings;
+
     // Do getRecordings is executed using a method GET (supported by all versions of BBB).
-    $url = \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('getRecordings', ['meetingID' => implode(',', $mids)],
+    $url = \mod_bigbluebuttonbn\locallib\bigbluebutton::action_url('getRecordings', ['meetingID' => implode(',', $missing_rid)],
 	    array(),$server);
     if(!bbb_server_healt($server)) return $recordings;
 
@@ -578,11 +600,17 @@ function bigbluebuttonbn_get_recordings_array_fetch_page($mids, $server) {
     if ($xml && $xml->returncode == 'SUCCESS' && isset($xml->recordings)) {
         // If there were meetings already created.
 	$recID = array();
+	$meetID = array();
         foreach ($xml->recordings->recording as $recordingxml) {
             $recording = bigbluebuttonbn_get_recording_array_value($recordingxml);
-            $recordings[$recording['recordID']] = $recording;
-            $recordings[$recording['recordID']]['server'] = $server;
-            $recID[$recording['recordID']] = 1;
+            $recording['server'] = $server;
+	    $mid = $recording['meetingID'];
+	    $rid = $recording['recordID'];
+            $recordings[$rid] = $recording;
+	    if(!isset($meetID[$mid])) $meetID[$mid] = array();
+	    $meetID[$mid][$rid] = $recording;
+            $meetID[$mid]['lastupdate'] = $tm1;
+            $recID[$rid] = 1;
 
             // Check if there is childs.
             if (isset($recordingxml->breakoutRooms->breakoutRoom)) {
@@ -596,12 +624,16 @@ function bigbluebuttonbn_get_recordings_array_fetch_page($mids, $server) {
                         // If there were meetings already created.
                         foreach ($xml->recordings->recording as $recordingxml) {
                             $recording = bigbluebuttonbn_get_recording_array_value($recordingxml);
-                            $recordings[$recording['recordID']] = $recording;
+                            $recordings[$rid] = $recording;
                         }
                     }
                 }
             }
         }
+	foreach($meetID as $m => $r) {
+	    if($m == 'lastupdate') continue;
+	    $cache->set($server.'_'.$m,$r);
+	}
 	bbb_access_recording_update($recID,$server);
     }
     return $recordings;
@@ -3977,6 +4009,8 @@ function bbb_get_cat_list() {
 	$ret = [];
 	$cci = $COURSE->category;
 	while($cci > 0) {
+		# for 3.8
+		# $cc = core_course_category::get($cci);
 		$cc = coursecat::get($cci);
 		$ret[$cc->name] = 1;
 		$cci = $cc->parent;
