@@ -219,6 +219,57 @@ function xmldb_bigbluebuttonbn_upgrade($oldversion = 0) {
         // Update db version tag.
         upgrade_mod_savepoint(true, 2019101001, 'bigbluebuttonbn');
     }
+    if ($oldversion < 2019101002) {
+        $fielddefinition = array('type' => XMLDB_TYPE_INTEGER, 'precision' => '5', 'unsigned' => null,
+            'notnull' => XMLDB_NOTNULL, 'sequence' => null, 'default' => 0, 'previous' => null);
+        xmldb_bigbluebuttonbn_add_change_field($dbman, 'bigbluebuttonbn', 'server',
+		$fielddefinition);
+	$DB->execute("UPDATE {bigbluebuttonbn} SET server=0 WHERE server is NULL");
+        xmldb_bigbluebuttonbn_add_change_field($dbman, 'bigbluebuttonbn_logs', 'server',
+		$fielddefinition);
+	$DB->execute("UPDATE {bigbluebuttonbn_logs} SET server=0 WHERE server is NULL");
+        xmldb_bigbluebuttonbn_add_change_field($dbman, 'bigbluebuttonbn', 'durationlimit',
+		$fielddefinition);
+	$DB->execute("UPDATE {bigbluebuttonbn} SET durationlimit=0 WHERE durationlimit is NULL");
+
+        $fielddefinition = array('type' => XMLDB_TYPE_INTEGER, 'precision' => '3', 'unsigned' => null,
+            'notnull' => XMLDB_NOTNULL, 'sequence' => null, 'default' => 0, 'previous' => null);
+        xmldb_bigbluebuttonbn_add_change_field($dbman, 'bigbluebuttonbn', 'uidlimit',
+                $fielddefinition);
+	$DB->execute("UPDATE {bigbluebuttonbn} SET uidlimit=0 WHERE uidlimit is NULL");
+        xmldb_bigbluebuttonbn_add_change_field($dbman, 'bigbluebuttonbn_logs', 'norecinfo',
+		$fielddefinition);
+	$DB->execute("UPDATE {bigbluebuttonbn_logs} SET norecinfo=0 WHERE norecinfo is NULL");
+
+        xmldb_bigbluebuttonbn_add_index($dbman, 'bigbluebuttonbn_logs','meetingid_idx',
+		['meetingid'],XMLDB_INDEX_NOTUNIQUE);
+        xmldb_bigbluebuttonbn_add_index($dbman, 'bigbluebuttonbn_logs','log_hash',
+		['log'],XMLDB_INDEX_NOTUNIQUE);
+
+	$table = new xmldb_table('bigbluebuttonbn_info');
+	$table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+	$table->add_field('server', XMLDB_TYPE_INTEGER, '5', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('meetingid', XMLDB_TYPE_CHAR, '127', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('meetinguid', XMLDB_TYPE_CHAR, '127', null, XMLDB_NOTNULL, null, null);
+	$table->add_field('starttime', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+	$table->add_field('users', XMLDB_TYPE_INTEGER, '5', null, XMLDB_NOTNULL, null, null);
+	$table->add_field('total_len', XMLDB_TYPE_INTEGER, '6', null, XMLDB_NOTNULL, null, '0');
+	$table->add_field('voice_len', XMLDB_TYPE_INTEGER, '6', null, XMLDB_NOTNULL, null, '0');
+	$table->add_field('rtc_len',   XMLDB_TYPE_INTEGER, '6', null, XMLDB_NOTNULL, null, '0');
+	$table->add_field('tcdesk_len', XMLDB_TYPE_INTEGER, '6', null, XMLDB_NOTNULL, null, '0');
+	$table->add_field('pr_cnt',    XMLDB_TYPE_INTEGER, '6', null, XMLDB_NOTNULL, null, '0');
+	$table->add_field('pr_pages',  XMLDB_TYPE_INTEGER, '6', null, XMLDB_NOTNULL, null, '0');
+	$table->add_field('audio_size', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+	$table->add_field('video_size', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+	$table->add_field('deskshare_size', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+	$table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+	#$table->add_key('h5pid', XMLDB_KEY_FOREIGN, ['h5pid'], 'h5p', ['id']);
+	if (!$dbman->table_exists($table)) {
+	     $dbman->create_table($table);
+	}
+
+        upgrade_mod_savepoint(true, 2019101002, 'bigbluebuttonbn');
+    }
     return true;
 }
 
@@ -245,6 +296,23 @@ function xmldb_bigbluebuttonbn_add_change_field($dbman, $tablename, $fieldname, 
     }
     $dbman->add_field($table, $field, true, true);
 }
+/**
+ * Generic helper function for adding index in a table.
+ *
+ * @param   object    $dbman
+ * @param   string    $tablename
+ * @param   string    $indexname
+ * @param   array     $fieldlist
+ * @param   string    $indexdefinition
+ */
+function xmldb_bigbluebuttonbn_add_index($dbman, $tablename, $indexname, $fieldlist, $indexdefinition) {
+    $table = new xmldb_table($tablename);
+    $index = new xmldb_index($indexname,$indexdefinition,$fieldlist);
+    if (!$dbman->index_exists($table, $index)) {
+        $dbman->add_index($table, $index, true, true);
+    }
+}
+
 
 /**
  * Generic helper function for dropping a field from a table.
