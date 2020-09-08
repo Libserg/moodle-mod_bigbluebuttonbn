@@ -3911,10 +3911,10 @@ function bigbluebuttonbn_create_meeting_metadata(&$bbbsession) {
 function bbb_server_restrict() {
     global $DB,$CFG;
     if(isset($CFG->bbb_server_rc)) return $CFG->bbb_server_rc;
-    $rc = $DB->get_records('config_plugins',array('plugin'=>'local_bbbadm'),'name','name,value');
-    if(!$rc) return false;
     $slist = \mod_bigbluebuttonbn\locallib\config::server_list();
-    foreach($rc as $k=>$v) {
+    $rc = $DB->get_records('config_plugins',array('plugin'=>'local_bbbadm'),'name','name,value');
+    if($rc) {
+      foreach($rc as $k=>$v) {
 	if(strchr($k,'_')) {
 	    $kv = explode('_',$k);
 	    if(count($kv) != 2) continue;
@@ -3927,6 +3927,7 @@ function bbb_server_restrict() {
 	    if($k == 'stopbbb') $slist[0]['stop'] = intval($v->value);
 	    if($k == 'denybbbtxt') $slist[0]['stopmsg'] = $v->value;
 	}
+      }
     }
     $opts = array( 'denybbbserver', 'autobbbserver', 'connlimitserver',
 		   'costbbbserver', 'multbbbserver');
