@@ -33,9 +33,10 @@ defined('MOODLE_INTERNAL') || die;
 global $CFG;
 
 require_once(__DIR__ . '/lib.php');
-# coursecatlib.php not needed for 3.8
-require_once($CFG->libdir . '/coursecatlib.php');
-
+if(intval($CFG->branch)  < 38) {
+  # coursecatlib.php not needed for 3.8
+  require_once($CFG->libdir . '/coursecatlib.php');
+}
 const BIGBLUEBUTTONBN_MAX_CONN = 200;
 /** @var BIGBLUEBUTTONBN_UPDATE_CACHE boolean set to true indicates that cache has to be updated */
 const BIGBLUEBUTTONBN_UPDATE_CACHE = true;
@@ -4006,12 +4007,14 @@ function bbb_cron() {
 
 function bbb_get_cat_list() {
 	global $COURSE;
+	global $CFG;
 	$ret = [];
 	$cci = $COURSE->category;
 	while($cci > 0) {
 		# for 3.8
-		# $cc = core_course_category::get($cci);
-		$cc = coursecat::get($cci);
+		$cc = intval($CFG->branch) < 38 ?
+			coursecat::get($cci) :
+			core_course_category::get($cci);
 		$ret[$cc->name] = 1;
 		$cci = $cc->parent;
 	}
