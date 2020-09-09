@@ -1,0 +1,15 @@
+Show the records only for moodle users.
+
+On BBB-sever
+
+apt install lua-nginx-cookie
+apt install lua-nginx-redis
+apt install lua-json
+
+systemctl nginx restart
+
+cp -a lua /etc/nginx/
+
+Apply patch bigbluebutton.diff to the file "/etc/nginx/site-available/bigbluebutton"
+Apply patch presentation.nginx.diff to the file "/etc/bigbluebutton/nginx/presentation"
+

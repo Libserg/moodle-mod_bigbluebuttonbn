@@ -1,0 +1,21 @@
+--- bigbluebutton.orig	2020-05-17 18:38:39.451508069 +0300
++++ bigbluebutton	2020-07-14 19:09:06.000000000 +0300
+@@ -53,6 +51,19 @@
+      include    fastcgi_params;
+   }
+ 
++  lua_need_request_body on;
++  location = /check_access {
++     internal;
++     default_type 'text/html';
++     content_by_lua_file '/etc/nginx/lua/access_check.lua';
++  }
++
++  location = /add_access {
++     default_type 'text/html';
++     content_by_lua_file '/etc/nginx/lua/access_add.lua';
++  }
++
+   # BigBlueButton landing page.
+   location / {
+     root   /var/www/bigbluebutton-default;

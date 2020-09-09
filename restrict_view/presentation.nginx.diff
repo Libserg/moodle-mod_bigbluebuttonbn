@@ -1,0 +1,16 @@
+--- nginx/presentation.nginx.orig	2020-05-17 17:58:15.000000000 +0300
++++ nginx/presentation.nginx	2020-05-18 00:48:06.000000000 +0300
+@@ -26,11 +26,13 @@
+ 	}
+ 
+         location /playback/presentation {
++		auth_request '/check_access';
+                 root    /var/bigbluebutton;
+                 index  index.html index.htm;
+         }
+ 
+         location /presentation {
++		auth_request '/check_access';
+                 root    /var/bigbluebutton/published;
+                 index  index.html index.htm;
+         }
