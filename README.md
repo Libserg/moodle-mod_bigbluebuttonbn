@@ -23,7 +23,7 @@ Each server may have parameters:
 * connlimitserver (opt)
 * costbbbserver (opt)
 * multbbbserver (opt)
-
+* restrict_view (opt)
 
 ```
 $CFG->bigbluebuttonbn[1]['server_name'] = 'Main server';

@@ -571,6 +571,7 @@ function bigbluebuttonbn_get_recordings_array_fetch($meetingidsarray, $server) {
  * @return array
  */
 function bigbluebuttonbn_get_recordings_array_fetch_page($mids, $server) {
+    global $CFG;
     $recordings = array();
     $missing_rid = array();
 
@@ -635,7 +636,9 @@ function bigbluebuttonbn_get_recordings_array_fetch_page($mids, $server) {
 	    if($m == 'lastupdate') continue;
 	    $cache->set($server.'_'.$m,$r);
 	}
-	bbb_access_recording_update($recID,$server);
+	if(isset($CFG->bigbluebuttonbn[$server]['restrict_view']) &&
+                 $CFG->bigbluebuttonbn[$server]['restrict_view'])
+		bbb_access_recording_update($recID,$server);
     }
     return $recordings;
 }
