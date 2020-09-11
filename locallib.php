@@ -2748,7 +2748,7 @@ function bigbluebuttonbn_get_recordings($courseid = 0, $bigbluebuttonbnid = null
         return array();
     }
     // Prepare select for loading records based on existent bigbluebuttonbns.
-    $sql = 'SELECT DISTINCT on(meetingid, server) id, meetingid, server, bigbluebuttonbnid FROM {bigbluebuttonbn_logs} WHERE ';
+    $sql = 'SELECT id, meetingid, server, bigbluebuttonbnid FROM {bigbluebuttonbn_logs} WHERE ';
     $sql .= '(bigbluebuttonbnid=' . implode(' OR bigbluebuttonbnid=', array_keys($bigbluebuttonbns)) . ')';
     // Include only Create events and exclude those with record not true.
     $sql .= ' AND log = ? AND meta LIKE ?';
@@ -2761,8 +2761,11 @@ function bigbluebuttonbn_get_recordings($courseid = 0, $bigbluebuttonbnid = null
     $sql .= ' server = ? and (bigbluebuttonbnid=' . implode(' OR bigbluebuttonbnid=', array_keys($bigbluebuttonbns)) . ')';
     $sql .= ' AND log = ? AND meta LIKE ?';
     // Execute select for loading records based on existent bigbluebuttonbns.
+    $skip_mid = array();
     foreach($rinfo as $id => $r) {
-		   
+	    $h = $r->meetingid . $r->server;
+	    if(isset($skip_mid[$h])) continue;
+	    $skip_mid[$h] = 1;
 	    $records = $DB->get_records_sql_menu($sql, array($r->server,BIGBLUEBUTTONBN_LOG_EVENT_CREATE, '%"record":true%'));
 	    # error_log("bigbluebuttonbn_get_recordings list server {$r->server} ".print_r($records,1),0);
 	    $rs = bigbluebuttonbn_get_recordings_array(array_keys($records), [], $r->server);
