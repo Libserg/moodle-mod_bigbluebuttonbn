@@ -2750,28 +2750,20 @@ function bigbluebuttonbn_get_recordings($courseid = 0, $bigbluebuttonbnid = null
     // Prepare select for loading records based on existent bigbluebuttonbns.
     $sql = 'SELECT id, meetingid, server, bigbluebuttonbnid FROM {bigbluebuttonbn_logs} WHERE ';
     $sql .= '(bigbluebuttonbnid=' . implode(' OR bigbluebuttonbnid=', array_keys($bigbluebuttonbns)) . ')';
-    // Include only Create events and exclude those with record not true.
     $sql .= ' AND log = ? AND meta LIKE ?';
-    // Execute select for loading records based on existent bigbluebuttonbns.
-
     $rinfo = $DB->get_records_sql($sql, array(BIGBLUEBUTTONBN_LOG_EVENT_CREATE, '%"record":true%'));
-    #error_log("bigbluebuttonbn_get_recordings list '$sql' ".print_r($rinfo,1),0);
     $ret = array();
-    $sql = 'SELECT DISTINCT meetingid, bigbluebuttonbnid FROM {bigbluebuttonbn_logs} WHERE ';
-    $sql .= ' server = ? and (bigbluebuttonbnid=' . implode(' OR bigbluebuttonbnid=', array_keys($bigbluebuttonbns)) . ')';
-    $sql .= ' AND log = ? AND meta LIKE ?';
-    // Execute select for loading records based on existent bigbluebuttonbns.
-    $skip_mid = array();
+    $s_records = [];
     foreach($rinfo as $id => $r) {
-	    $h = $r->meetingid . $r->server;
-	    if(isset($skip_mid[$h])) continue;
-	    $skip_mid[$h] = 1;
-	    $records = $DB->get_records_sql_menu($sql, array($r->server,BIGBLUEBUTTONBN_LOG_EVENT_CREATE, '%"record":true%'));
-	    # error_log("bigbluebuttonbn_get_recordings list server {$r->server} ".print_r($records,1),0);
-	    $rs = bigbluebuttonbn_get_recordings_array(array_keys($records), [], $r->server);
-	    if(count($rs) > 0)
-		    $ret = array_merge($ret,$rs);
+	if(!isset($s_records[$r->server])) $s_records[$r->server] = [];
+	$s_records[$r->server][$r->meetingid] = $r->bigbluebuttonbnid;
     }
+    foreach($s_records as $server => $r) {
+        $rs = bigbluebuttonbn_get_recordings_array(array_keys($r), [], $server);
+        if(count($rs) > 0)
+	    $ret = array_merge($ret,$rs);
+    }
+
     uasort($ret, 'bigbluebuttonbn_recording_build_sorter');
     // Get actual recordings.
     return $ret;
