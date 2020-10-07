@@ -197,6 +197,7 @@ function bigbluebuttonbn_broker_recording_info($bbbsession, $params, $showroom) 
     }
     $includedeleted = $bbbsession['bigbluebuttonbn']->recordings_deleted;
     // Retrieve the array of imported recordings.
+    if($bbbsession['server'] > 0) {
     $recordings = bigbluebuttonbn_get_allrecordings($courseid, $bigbluebuttonbnid, $showroom, $includedeleted,
     	$bbbsession['server']);
     if (array_key_exists($params['id'], $recordings)) {
@@ -214,6 +215,7 @@ function bigbluebuttonbn_broker_recording_info($bbbsession, $params, $showroom) 
         // The recording was found.
         $callbackresponse = bigbluebuttonbn_broker_recording_info_current($recordings[$params['id']], $params);
     }
+    } // no server info
     $callbackresponsedata = json_encode($callbackresponse);
     return "{$params['callback']}({$callbackresponsedata});";
 }
