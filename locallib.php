@@ -635,6 +635,11 @@ function bigbluebuttonbn_get_recordings_array_fetch_page($mids, $server) {
 	foreach($meetID as $m => $r) {
 	    if($m == 'lastupdate') continue;
 	    $cache->set($server.'_'.$m,$r);
+	    foreach($r as $r2) {
+	      if(!is_array($r2)) continue; # skip update_time
+              if(!isset($r2['recordID'])) continue;
+	      $cache->set($server.'_r_'.$r2['recordID'],$m);
+	    }
 	}
 	if(isset($CFG->bigbluebuttonbn[$server]['restrict_view']) &&
                  $CFG->bigbluebuttonbn[$server]['restrict_view'])
@@ -790,6 +795,22 @@ function bigbluebuttonbn_recording_build_sorter($a, $b) {
     return $resultmore;
 }
 
+function bigbluebuttonbn_recordings_cache_update($recordids, $server) {
+    $cache = cache::make_from_params(cache_store::MODE_APPLICATION, 'mod_bigbluebuttonbn', 'records_cache');
+    if(!$cache) return;
+    if(!is_array($recordids)) {
+	$r = $recordids;
+	$recordids = [ $r ];
+    }
+    foreach($recordids as $rid) {
+        $mid = $cache->get($server.'_r_'.$rid);
+	if($mid !== false) {
+#	    error_log("bigbluebuttonbn_recordings_cache_update $server $rid -> $mid",0);
+	    $cache->delete($server.'_'.$mid);
+            $cache->delete($server.'_r_'.$rid);
+	}
+    }
+}
 /**
  * Perform deleteRecordings on BBB.
  *
@@ -812,6 +833,7 @@ function bigbluebuttonbn_delete_recordings($recordids, $server = false) {
             return false;
         }
     }
+    bigbluebuttonbn_recordings_cache_update($ids, $server);
     return true;
 }
 
@@ -832,6 +854,7 @@ function bigbluebuttonbn_publish_recordings($recordids, $publish = 'true', $serv
             return false;
         }
     }
+    bigbluebuttonbn_recordings_cache_update($ids, $server);
     return true;
 }
 
@@ -852,6 +875,7 @@ function bigbluebuttonbn_update_recordings($recordids, $params, $server=false) {
             return false;
         }
     }
+    bigbluebuttonbn_recordings_cache_update($ids, $server);
     return true;
 }
 

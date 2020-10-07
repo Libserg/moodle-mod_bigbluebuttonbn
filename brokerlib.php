@@ -441,12 +441,15 @@ function bigbluebuttonbn_broker_recording_action_unprotect($params, $recordings)
  */
 function bigbluebuttonbn_broker_recording_action_unpublish($params, $recordings) {
     global $DB;
+    if(!isset($recordings[$params['id']]['server']))
+	    throw new \Exception("bigbluebuttonbn_broker_recording_action_unpublish no server");
+    $server = $recordings[$params['id']]['server'];
     if (bigbluebuttonbn_broker_recording_is_imported($recordings, $params['id'])) {
         // Execute unpublish or protect on imported recording link.
         return array(
             'status' => bigbluebuttonbn_publish_recording_imported(
                 $recordings[$params['id']]['imported'],
-                false,$recordings[$params['id']]['server']
+                false,$server
             )
         );
     }
@@ -465,7 +468,7 @@ function bigbluebuttonbn_broker_recording_action_unpublish($params, $recordings)
     return array(
         'status' => bigbluebuttonbn_publish_recordings(
             $params['id'],
-            'false', $recordings[$params['id']]['server']
+            'false', $server
         )
     );
 }
