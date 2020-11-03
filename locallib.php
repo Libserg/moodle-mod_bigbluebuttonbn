@@ -2783,6 +2783,7 @@ function bigbluebuttonbn_get_recordings($courseid = 0, $bigbluebuttonbnid = null
 	$s_records[$r->server][$r->meetingid] = $r->bigbluebuttonbnid;
     }
     foreach($s_records as $server => $r) {
+	if(!$server) continue;
         $rs = bigbluebuttonbn_get_recordings_array(array_keys($r), [], $server);
         if(count($rs) > 0)
 	    $ret = array_merge($ret,$rs);
